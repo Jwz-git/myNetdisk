@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网盘管理</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>管理面板</h1>
+        </header>
+        
+        <section class="upload-section">
+            <h2>文件</h2>
+            <form id="upload-form" class="upload-form">
+                <div class="file-input">
+                    <input type="file" id="file-input" name="files" multiple required>
+                </div>
+                <button type="submit" class="upload-btn">上传文件</button>
+                <div id="upload-status" class="status-message"></div>
+            </form>
+        </section>
+        
+        <section class="file-list-section">
+            <h2>文件列表</h2>
+            <ul id="file-list" class="file-list">
+                <!-- 文件项将由JavaScript动态生成 -->
+            </ul>
+        </section>
+        
+        <footer>
+            <p>© 个人网盘</p>
+        </footer>
+    </div>
+    
+    <script src="/static/js/admin.js"></script>
+</body>
+</html>
