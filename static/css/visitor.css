@@ -48,6 +48,46 @@ header h1 {
     padding-bottom: 10px;
 }
 
+.search-container {
+    display: flex;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.search-input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.search-btn, .reset-btn {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.search-btn {
+    background-color: #27ae60;
+    color: white;
+}
+
+.reset-btn {
+    background-color: #6c757d;
+    color: white;
+}
+
+.search-btn:hover {
+    background-color: #229954;
+}
+
+.reset-btn:hover {
+    background-color: #5a6268;
+}
+
 .file-list {
     list-style: none;
 }

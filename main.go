@@ -34,7 +34,8 @@ func closeDB() {
 func main(){
     connectDB()
 
-    fmt.Println("开始")
+    fmt.Println("time:", model.GetCurrentTime())
+    fmt.Println("HTTP 服务正在运行，访问 http://localhost:8080 来使用个人网盘")
 
     // 静态文件
     http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
@@ -43,6 +44,8 @@ func main(){
     http.HandleFunc("/api/upload", controller.UploadHandler)
     http.HandleFunc("/api/files", controller.ListFilesHandler)
     http.HandleFunc("/api/download/", controller.DownloadHandler)
+    http.HandleFunc("/api/delete/", controller.DeleteHandler)
+    http.HandleFunc("/api/rename/", controller.RenameHandler)
 
     // 页面
     http.HandleFunc("/admin", controller.AdminHandler)

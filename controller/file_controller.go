@@ -59,6 +59,11 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		defer dstFile.Close()
 
+		if exists, _ := model.JudgeFileExists(filename); exists {
+			response.Error = fmt.Sprintf("文件 %s 已存在", filename)
+			break
+		}
+
 		_, err = io.Copy(dstFile, srcFile)
 		if err != nil {
 			response.Error = fmt.Sprintf("保存文件 %s 失败: %v", fileHeader.Filename, err)
@@ -127,7 +132,105 @@ func DownloadHandler(w http.ResponseWriter, r *http.Request) {
 	// 2. 下载文件
     w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename*=utf-8''%s", fileInfo.FileName))
     w.Header().Set("Content-Type", "application/octet-stream")
-    http.ServeFile(w, r, fileInfo.FilePath)
+    
+    file, err := os.Open(fileInfo.FilePath)
+    if err != nil {
+        http.Error(w, "打开文件失败", http.StatusInternalServerError)
+        return
+    }
+    defer file.Close()
+    
+    fi, err := file.Stat()
+    if err != nil {
+        http.Error(w, "获取文件信息失败", http.StatusInternalServerError)
+        return
+    }
+    
+    http.ServeContent(w, r, fileInfo.FileName, fi.ModTime(), file)
+}
+
+func DeleteHandler(w http.ResponseWriter, r *http.Request) {
+	// 1. 获取文件相关数据
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(parts) < 3 || parts[1] != "delete" {
+		http.Error(w, "无效的请求路径", http.StatusBadRequest)
+		return
+	}
+	id := parts[2]
+
+	fileInfo, err := model.GetFileInfoByID(id)
+	if err != nil {
+		http.Error(w, "查询文件信息失败", http.StatusInternalServerError)
+		return
+	}
+
+	// 2. 删除数据库中的文件信息
+	err = model.DeleteFileInfoByID(id)
+	if err != nil {
+		http.Error(w, "删除文件信息失败", http.StatusInternalServerError)
+		return
+	}
+
+	// 3. 删除实际文件
+	err = os.Remove(fileInfo.FilePath)
+	if err != nil {
+		http.Error(w, "删除文件失败", http.StatusInternalServerError)
+		return
+	}
+
+	response := Response{
+		Success: true,
+		Message: "文件删除成功",
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
+}
+
+func RenameHandler(w http.ResponseWriter, r *http.Request) {
+	// 1. 获取文件相关数据
+	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
+	if len(parts) < 3 || parts[1] != "rename" {
+		http.Error(w, "无效的请求路径", http.StatusBadRequest)
+		return
+	}
+	id := parts[2]
+
+	oldFile, err := model.GetFileInfoByID(id)
+	if err != nil {
+		http.Error(w, "获取文件信息失败", http.StatusInternalServerError)
+		return
+	}
+
+	var data struct {
+		NewName string `json:"file_name"`
+	}
+
+	err = json.NewDecoder(r.Body).Decode(&data)
+	if err != nil {
+		// 处理错误（例如返回 400）
+		http.Error(w, "无效的 JSON", http.StatusBadRequest)
+		return
+	}
+	newName := data.NewName
+
+	err = model.RenameFileInfoByID(id, newName)
+	if err != nil {
+		http.Error(w, "重命名文件信息失败", http.StatusInternalServerError)
+		return
+	}
+
+	err = os.Rename(filepath.Join("uploads", oldFile.FileName), filepath.Join("uploads", newName))
+	if err != nil {
+		http.Error(w, "重命名文件失败", http.StatusInternalServerError)
+		return
+	}
+
+	response := Response{
+		Success: true,
+		Message: "文件重命名成功",
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
 // 返回 admin 页面

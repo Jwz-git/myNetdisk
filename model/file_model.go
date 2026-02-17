@@ -13,7 +13,7 @@ type FileInfo struct {
 	FileName   string       `json:"file_name"`
 	FilePath   string       `json:"file_path"`
 	FileSize   int64        `json:"file_size"`
-	UploadTime time.Time    `json:"upload_time"`
+	UpdateTime time.Time    `json:"update_time"`
 }
 
 // 全局数据库连接对象，方便其他函数使用
@@ -44,7 +44,7 @@ func InitDB(dataSourceName string) error {
 }
 
 func GetAllFileInfos() ([]FileInfo, error) {
-    cursor, err := DB.Query("SELECT id, file_name, file_path, file_size, upload_time FROM file_info")
+    cursor, err := DB.Query("SELECT id, file_name, file_path, file_size, update_time FROM file_info ORDER BY update_time DESC")
     if err != nil{
         fmt.Printf("查询文件信息失败: %v\n", err)
         return nil, err
@@ -55,7 +55,7 @@ func GetAllFileInfos() ([]FileInfo, error) {
 
     for cursor.Next(){
         var f FileInfo
-        err := cursor.Scan(&f.ID, &f.FileName, &f.FilePath, &f.FileSize, &f.UploadTime)
+        err := cursor.Scan(&f.ID, &f.FileName, &f.FilePath, &f.FileSize, &f.UpdateTime)
         if err != nil{
             fmt.Printf("扫描文件信息失败: %v\n", err)
             return nil, err
@@ -73,14 +73,14 @@ func GetAllFileInfos() ([]FileInfo, error) {
 
 func GetFileInfoByID(id string) (FileInfo,error){
 	var f FileInfo
-	cursor,err := DB.Query("SELECT id, file_name, file_path, file_size, upload_time FROM file_info WHERE id = ?", id)
+	cursor,err := DB.Query("SELECT id, file_name, file_path, file_size, update_time FROM file_info WHERE id = ?", id)
 	if err != nil{
 		fmt.Printf("查询文件信息失败: %v\n", err)
 		return FileInfo{}, err
 	}
 	defer cursor.Close()
 	if cursor.Next() {
-		err := cursor.Scan(&f.ID, &f.FileName, &f.FilePath, &f.FileSize, &f.UploadTime)
+		err := cursor.Scan(&f.ID, &f.FileName, &f.FilePath, &f.FileSize, &f.UpdateTime)
 		if err != nil {
 			fmt.Printf("扫描文件信息失败: %v\n", err)
 			return FileInfo{}, err
@@ -90,7 +90,30 @@ func GetFileInfoByID(id string) (FileInfo,error){
 	return FileInfo{}, fmt.Errorf("未找到ID为 %s 的文件信息", id)
 }
 
+func JudgeFileExists(fileName string) (bool, error) {
+	var count int
+	err := DB.QueryRow("SELECT COUNT(*) FROM file_info WHERE file_name = ?", fileName).Scan(&count)
+	if err != nil {
+		return false, fmt.Errorf("查询文件信息失败: %v", err)
+	}
+	return count > 0, nil
+}
+
 func AddFileInfo(fileName, filePath string, fileSize int64) error {
-    _,err := DB.Exec("INSERT INTO file_info (file_name, file_path, file_size, upload_time) VALUES (?, ?, ?, ?)", fileName, filePath, fileSize, time.Now())
+    _,err := DB.Exec("INSERT INTO file_info (file_name, file_path, file_size, update_time) VALUES (?, ?, ?, ?)", fileName, filePath, fileSize, time.Now())
     return err
+}
+
+func DeleteFileInfoByID(id string) error {
+	_, err := DB.Exec("DELETE FROM file_info WHERE id = ?", id)
+	return err
+}
+
+func RenameFileInfoByID(id, newName string) error {
+	_, err := DB.Exec("UPDATE file_info SET file_name = ?, file_path = ?, update_time = ? WHERE id = ?", newName, "uploads/"+newName, time.Now(), id)
+	return err
+}
+
+func GetCurrentTime() string {
+	return time.Now().Format("2006-01-02 15:04:05")
 }
