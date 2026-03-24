@@ -39,7 +39,34 @@ func InitDB(dataSourceName string) error {
 		return fmt.Errorf("连接数据库失败: %v", err)
 	}
 
+	// 初始化数据库表
+	if err = initTables(); err != nil {
+		return fmt.Errorf("初始化数据库表失败: %v", err)
+	}
+
 	log.Println("数据库连接成功")
+	return nil
+}
+
+// 初始化数据库表
+func initTables() error {
+	// 创建 file_info 表
+	createTableSQL := `
+	CREATE TABLE IF NOT EXISTS file_info (
+		id INT AUTO_INCREMENT PRIMARY KEY,
+		file_name VARCHAR(255) NOT NULL,
+		file_path VARCHAR(500) NOT NULL,
+		file_size BIGINT,
+		update_time DATETIME DEFAULT CURRENT_TIMESTAMP
+	) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+	`
+
+	_, err := DB.Exec(createTableSQL)
+	if err != nil {
+		return fmt.Errorf("创建 file_info 表失败: %v", err)
+	}
+
+	log.Println("数据库表初始化成功")
 	return nil
 }
 
