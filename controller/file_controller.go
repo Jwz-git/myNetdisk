@@ -130,25 +130,26 @@ func DownloadHandler(w http.ResponseWriter, r *http.Request) {
 	// fmt.Printf("文件名：%s, 路径：%s\n", fileInfo.FileName, fileInfo.FilePath)
 
 	// 2. 下载文件
-    w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename*=utf-8''%s", fileInfo.FileName))
-    w.Header().Set("Content-Type", "application/octet-stream")
-    
-    file, err := os.Open(fileInfo.FilePath)
-    if err != nil {
-        http.Error(w, "打开文件失败", http.StatusInternalServerError)
-        return
-    }
-    defer file.Close()
-    
-    fi, err := file.Stat()
-    if err != nil {
-        http.Error(w, "获取文件信息失败", http.StatusInternalServerError)
-        return
-    }
-    
-    http.ServeContent(w, r, fileInfo.FileName, fi.ModTime(), file)
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename*=utf-8''%s", fileInfo.FileName))
+	w.Header().Set("Content-Type", "application/octet-stream")
+
+	file, err := os.Open(fileInfo.FilePath)
+	if err != nil {
+		http.Error(w, "打开文件失败", http.StatusInternalServerError)
+		return
+	}
+	defer file.Close()
+
+	fi, err := file.Stat()
+	if err != nil {
+		http.Error(w, "获取文件信息失败", http.StatusInternalServerError)
+		return
+	}
+
+	http.ServeContent(w, r, fileInfo.FileName, fi.ModTime(), file)
 }
 
+// 删除文件
 func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 	// 1. 获取文件相关数据
 	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
@@ -186,6 +187,7 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
+// 重命名文件
 func RenameHandler(w http.ResponseWriter, r *http.Request) {
 	// 1. 获取文件相关数据
 	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
@@ -235,6 +237,11 @@ func RenameHandler(w http.ResponseWriter, r *http.Request) {
 
 // 返回 admin 页面
 func AdminHandler(w http.ResponseWriter, r *http.Request) {
+	// 检查是否已登录
+	if !IsLoggedIn(r) {
+		http.Redirect(w, r, "/login", http.StatusFound)
+		return
+	}
 	http.ServeFile(w, r, "templates/admin.html")
 }
 

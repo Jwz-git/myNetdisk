@@ -64,9 +64,11 @@ func main() {
 	http.HandleFunc("/api/download/", controller.DownloadHandler)
 	http.HandleFunc("/api/delete/", controller.DeleteHandler)
 	http.HandleFunc("/api/rename/", controller.RenameHandler)
+	http.HandleFunc("/api/login", controller.LoginHandler)
 
 	// 页面
 	http.HandleFunc("/admin", controller.AdminHandler)
+	http.HandleFunc("/login", controller.LoginPageHandler)
 	http.HandleFunc("/", controller.IndexHandler)
 
 	http.ListenAndServe(":8080", nil)
