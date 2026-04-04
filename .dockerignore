@@ -1,0 +1,70 @@
+# Git 相关
+.git
+.gitignore
+.gitattributes
+
+# IDE 和编辑器
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# 系统文件
+.DS_Store
+Thumbs.db
+
+# 日志文件
+*.log
+logs/
+logs_test/
+
+# 临时和缓存文件
+*.tmp
+*.temp
+.cache/
+
+# 构建产物
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+personal-disk
+test_config
+
+# 测试覆盖率
+*.out
+coverage.html
+
+# 备份文件
+backup/
+*.backup
+*.bak
+
+# 环境文件
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# 运行时目录
+uploads/
+uploads_test/
+
+# Docker 相关
+Dockerfile*
+docker-compose*.yml
+*.tar
+
+# 文档和说明（构建时不需要）
+README.md
+*.md
+docs/
+
+# 脚本文件（构建时不需要）
+scripts/
+
+# 构建工具
+Makefile

@@ -1,5 +1,6 @@
 # Logs
-logs
+logs/
+logs_test/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,10 +8,20 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Node.js
 node_modules
 dist
 dist-ssr
 *.local
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
 
 # Editor directories and files
 .vscode/*
@@ -23,6 +34,20 @@ dist-ssr
 *.sln
 *.sw?
 
-基础设计.md
-uploads/*
+# Project specific
+plan.md
+uploads/
+uploads_test/
+mysql-data/
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Docker
+*.tar
+docker-compose.override.yml
 

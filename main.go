@@ -4,44 +4,41 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"os"
+	"personal-disk/config"
 	"personal-disk/controller"
 	"personal-disk/model"
 )
 
-func connectDB() error {
-	// 从环境变量读取数据库配置
-	dbHost := getEnv("DB_HOST", "127.0.0.1")
-	dbPort := getEnv("DB_PORT", "3306")
-	dbUser := getEnv("DB_USER", "root")
-	dbPassword := getEnv("DB_PASSWORD", "")
-	dbName := getEnv("DB_NAME", "personal_disk")
+func main() {
+	// 初始化配置
+	cfg := config.InitConfig()
 
-	// 构建 MySQL 数据源名称
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		dbUser, dbPassword, dbHost, dbPort, dbName)
+	// 初始化数据库
+	if err := initDatabase(cfg); err != nil {
+		log.Fatalf("数据库初始化失败: %v", err)
+	}
+	defer closeDB()
 
-	// 初始化数据库连接
+	// 启动HTTP服务器
+	startServer(cfg)
+}
+
+// initDatabase 初始化数据库连接
+func initDatabase(cfg *config.Config) error {
+	dsn := cfg.GetDSN()
+
 	err := model.InitDB(dsn)
 	if err != nil {
-		log.Fatalf("数据库初始化失败: %v", err) // 如果失败，直接终止程序
+		return fmt.Errorf("数据库连接失败: %v", err)
 	}
 
-	// 连接成功
-	fmt.Println("数据库连接成功，准备启动 HTTP 服务...")
+	fmt.Printf("数据库连接成功: %s@%s:%s/%s\n",
+		cfg.Database.User, cfg.Database.Host, cfg.Database.Port, cfg.Database.Name)
 
 	return nil
 }
 
-// getEnv 获取环境变量，如果不存在则返回默认值
-func getEnv(key, defaultValue string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		return defaultValue
-	}
-	return value
-}
-
+// closeDB 关闭数据库连接
 func closeDB() {
 	if model.DB != nil {
 		model.DB.Close()
@@ -49,16 +46,34 @@ func closeDB() {
 	}
 }
 
-func main() {
-	connectDB()
+// startServer 启动HTTP服务器
+func startServer(cfg *config.Config) {
+	// 设置路由
+	setupRoutes(cfg)
 
-	fmt.Println("time:", model.GetCurrentTime())
-	fmt.Println("HTTP 服务正在运行，访问 http://localhost:8080 来使用个人网盘")
+	// 服务器地址
+	addr := cfg.GetServerAddr()
 
-	// 静态文件
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	// 输出启动信息
+	fmt.Printf("=== %s ===\n", cfg.App.Name)
+	fmt.Printf("版本: %s\n", cfg.App.Version)
+	fmt.Printf("环境: %s\n", config.GetEnv("APP_ENV", "development"))
+	fmt.Printf("服务器启动: http://%s\n", addr)
+	fmt.Printf("管理页面: http://%s/admin\n", addr)
+	fmt.Printf("当前时间: %s\n", model.GetCurrentTime())
 
-	// API
+	// 启动服务器
+	log.Fatal(http.ListenAndServe(addr, nil))
+}
+
+// setupRoutes 设置路由
+func setupRoutes(cfg *config.Config) {
+	// 静态文件服务
+	http.Handle(cfg.Static.URLPrefix,
+		http.StripPrefix(cfg.Static.URLPrefix,
+			http.FileServer(http.Dir(cfg.Static.Directory))))
+
+	// API 路由
 	http.HandleFunc("/api/upload", controller.UploadHandler)
 	http.HandleFunc("/api/files", controller.ListFilesHandler)
 	http.HandleFunc("/api/download/", controller.DownloadHandler)
@@ -66,13 +81,8 @@ func main() {
 	http.HandleFunc("/api/rename/", controller.RenameHandler)
 	http.HandleFunc("/api/login", controller.LoginHandler)
 
-	// 页面
+	// 页面路由
 	http.HandleFunc("/admin", controller.AdminHandler)
 	http.HandleFunc("/login", controller.LoginPageHandler)
 	http.HandleFunc("/", controller.IndexHandler)
-
-	http.ListenAndServe(":8080", nil)
-
-	// 程序退出时关闭数据库连接
-	defer closeDB()
 }

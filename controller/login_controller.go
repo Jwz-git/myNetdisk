@@ -3,12 +3,7 @@ package controller
 import (
 	"encoding/json"
 	"net/http"
-)
-
-// 硬编码的管理员凭据（实际项目中应该从数据库或配置文件中读取）
-const (
-	AdminUsername = "admin"
-	AdminPassword = "123456"
+	"personal-disk/config"
 )
 
 // 登录请求结构
@@ -24,6 +19,9 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// 获取配置
+	cfg := config.MustGetConfig()
+
 	var req LoginRequest
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
@@ -31,8 +29,8 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 验证用户名和密码
-	if req.Username != AdminUsername || req.Password != AdminPassword {
+	// 验证用户名和密码（使用配置中的凭据）
+	if req.Username != cfg.Admin.Username || req.Password != cfg.Admin.Password {
 		response := Response{
 			Success: false,
 			Error:   "用户名或密码错误",
@@ -43,19 +41,19 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 创建会话
-	session, err := r.Cookie("admin_session")
+	// 创建会话（使用配置中的会话设置）
+	session, err := r.Cookie(cfg.Session.CookieName)
 	if err != nil {
 		session = &http.Cookie{
-			Name:   "admin_session",
-			Value:  "admin_logged_in",
-			Path:   "/",
-			MaxAge: 86400, // 24小时
+			Name:   cfg.Session.CookieName,
+			Value:  cfg.Session.CookieValue,
+			Path:   cfg.Session.CookiePath,
+			MaxAge: cfg.Session.MaxAge,
 		}
 	}
-	session.Value = "admin_logged_in"
-	session.Path = "/"
-	session.MaxAge = 86400
+	session.Value = cfg.Session.CookieValue
+	session.Path = cfg.Session.CookiePath
+	session.MaxAge = cfg.Session.MaxAge
 	http.SetCookie(w, session)
 
 	response := Response{
@@ -69,11 +67,14 @@ func LoginHandler(w http.ResponseWriter, r *http.Request) {
 
 // 退出登录处理函数
 func LogoutHandler(w http.ResponseWriter, r *http.Request) {
+	// 获取配置
+	cfg := config.MustGetConfig()
+
 	// 删除会话
 	session := &http.Cookie{
-		Name:   "admin_session",
+		Name:   cfg.Session.CookieName,
 		Value:  "",
-		Path:   "/",
+		Path:   cfg.Session.CookiePath,
 		MaxAge: -1, // 立即删除
 	}
 	http.SetCookie(w, session)
@@ -84,19 +85,26 @@ func LogoutHandler(w http.ResponseWriter, r *http.Request) {
 
 // 检查是否已登录
 func IsLoggedIn(r *http.Request) bool {
-	session, err := r.Cookie("admin_session")
+	cfg := config.MustGetConfig()
+
+	session, err := r.Cookie(cfg.Session.CookieName)
 	if err != nil {
 		return false
 	}
-	return session.Value == "admin_logged_in"
+	return session.Value == cfg.Session.CookieValue
 }
 
 // 登录页面处理函数
 func LoginPageHandler(w http.ResponseWriter, r *http.Request) {
+	// 获取配置
+	cfg := config.MustGetConfig()
+
 	// 如果已经登录，直接重定向到 admin 页面
 	if IsLoggedIn(r) {
 		http.Redirect(w, r, "/admin", http.StatusFound)
 		return
 	}
-	http.ServeFile(w, r, "templates/login.html")
+
+	templatePath := cfg.Templates.Directory + "/login.html"
+	http.ServeFile(w, r, templatePath)
 }

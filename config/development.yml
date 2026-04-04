@@ -1,0 +1,79 @@
+# Development 环境配置文件
+# 用于本地开发环境
+
+# 数据库配置
+database:
+  host: "127.0.0.1"
+  port: "3306"
+  user: "root"
+  password: ""
+  name: "personal_disk_dev"
+  charset: "utf8mb4"
+  parseTime: true
+  location: "Local"
+
+# 服务器配置
+server:
+  port: "8080"
+  host: "127.0.0.1"  # 开发环境只监听本地
+
+# 管理员账号配置
+admin:
+  username: "admin"
+  password: "dev123456"  # 开发环境密码
+
+# 文件上传配置
+upload:
+  directory: "uploads"
+  maxSize: 104857600    # 开发环境限制为 100MB
+  allowedTypes:
+    - "jpg"
+    - "jpeg"
+    - "png"
+    - "gif"
+    - "pdf"
+    - "doc"
+    - "docx"
+    - "txt"
+    - "zip"
+    - "rar"
+
+# 会话配置
+session:
+  cookieName: "dev_admin_session"
+  cookieValue: "dev_admin_logged_in"
+  cookiePath: "/"
+  maxAge: 7200  # 开发环境2小时过期
+
+# 静态文件配置
+static:
+  directory: "static"
+  urlPrefix: "/static/"
+
+# 模板文件配置
+templates:
+  directory: "templates"
+
+# 日志配置
+logging:
+  level: "debug"        # 开发环境开启调试日志
+  file: ""              # 输出到控制台
+  maxSize: 100
+  maxBackups: 3
+  maxAge: 7             # 开发环境保留7天
+
+# 安全配置
+security:
+  enableCORS: true
+  allowedOrigins:
+    - "http://localhost:3000"
+    - "http://127.0.0.1:3000"
+    - "http://localhost:8080"
+  enableRateLimit: false  # 开发环境关闭限流
+
+# 应用信息
+app:
+  name: "Personal Disk (Dev)"
+  version: "1.0.0-dev"
+  description: "个人网盘系统 - 开发环境"
+  author: "Developer"

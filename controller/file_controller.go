@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"personal-disk/config"
 	"personal-disk/model"
 	"strings"
 )
@@ -19,14 +20,17 @@ type Response struct {
 
 // 上传文件
 func UploadHandler(w http.ResponseWriter, r *http.Request) {
+	// 获取配置
+	cfg := config.MustGetConfig()
+
 	// 1. 解析请求
 	// 限制请求方法
 	if r.Method != http.MethodPost {
 		http.Error(w, "提交方式错误", http.StatusMethodNotAllowed)
 		return
 	}
-	// 设置缓冲区大小
-	err := r.ParseMultipartForm(512 << 20) // 512 MB
+	// 设置缓冲区大小（使用配置中的最大上传大小）
+	err := r.ParseMultipartForm(cfg.Upload.MaxSize)
 	if err != nil {
 		http.Error(w, "解析表单失败: "+err.Error(), http.StatusBadRequest)
 		return
@@ -40,6 +44,23 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 	// 2. 向数据库添加文件信息
 	var response Response
 	for _, fileHeader := range files {
+		// 检查文件类型是否允许
+		ext := strings.ToLower(filepath.Ext(fileHeader.Filename))
+		if ext != "" {
+			ext = ext[1:] // 移除点号
+		}
+		if !cfg.IsAllowedFileType(ext) {
+			response.Error = fmt.Sprintf("不允许上传 %s 类型的文件", ext)
+			break
+		}
+
+		// 检查文件大小
+		if fileHeader.Size > cfg.Upload.MaxSize {
+			response.Error = fmt.Sprintf("文件 %s 大小超过限制（%d MB）",
+				fileHeader.Filename, cfg.Upload.MaxSize/(1024*1024))
+			break
+		}
+
 		// 打开上传的文件
 		srcFile, err := fileHeader.Open() // 使用里面的临时指针
 		if err != nil {
@@ -50,7 +71,13 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 		filename := fileHeader.Filename
 		size := fileHeader.Size
-		destPath := filepath.Join("uploads", filename)
+		destPath := filepath.Join(cfg.Upload.Directory, filename)
+
+		// 确保上传目录存在
+		if err := os.MkdirAll(cfg.Upload.Directory, 0755); err != nil {
+			response.Error = fmt.Sprintf("创建上传目录失败: %v", err)
+			break
+		}
 
 		dstFile, err := os.Create(destPath)
 		if err != nil {
@@ -88,6 +115,7 @@ func UploadHandler(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	} else {
 		response.Success = true
+		response.Message = "文件上传成功"
 		w.WriteHeader(http.StatusOK)
 	}
 	json.NewEncoder(w).Encode(response)
@@ -189,6 +217,9 @@ func DeleteHandler(w http.ResponseWriter, r *http.Request) {
 
 // 重命名文件
 func RenameHandler(w http.ResponseWriter, r *http.Request) {
+	// 获取配置
+	cfg := config.MustGetConfig()
+
 	// 1. 获取文件相关数据
 	parts := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
 	if len(parts) < 3 || parts[1] != "rename" {
@@ -221,7 +252,8 @@ func RenameHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = os.Rename(filepath.Join("uploads", oldFile.FileName), filepath.Join("uploads", newName))
+	err = os.Rename(filepath.Join(cfg.Upload.Directory, oldFile.FileName),
+		filepath.Join(cfg.Upload.Directory, newName))
 	if err != nil {
 		http.Error(w, "重命名文件失败", http.StatusInternalServerError)
 		return
@@ -237,16 +269,24 @@ func RenameHandler(w http.ResponseWriter, r *http.Request) {
 
 // 返回 admin 页面
 func AdminHandler(w http.ResponseWriter, r *http.Request) {
+	// 获取配置
+	cfg := config.MustGetConfig()
+
 	// 检查是否已登录
 	if !IsLoggedIn(r) {
 		http.Redirect(w, r, "/login", http.StatusFound)
 		return
 	}
-	http.ServeFile(w, r, "templates/admin.html")
+
+	templatePath := filepath.Join(cfg.Templates.Directory, "admin.html")
+	http.ServeFile(w, r, templatePath)
 }
 
 // 返回 index 页面
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
-	// fmt.Println("访问了 index 页面")
-	http.ServeFile(w, r, "templates/index.html")
+	// 获取配置
+	cfg := config.MustGetConfig()
+
+	templatePath := filepath.Join(cfg.Templates.Directory, "index.html")
+	http.ServeFile(w, r, templatePath)
 }
