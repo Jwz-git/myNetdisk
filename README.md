@@ -230,7 +230,7 @@ make build
 3. **数据库操作**
    ```bash
    # 连接开发数据库
-   docker exec -it personal_disk_db mysql -u root -p personal_disk_dev
+   docker exec -it personal_disk_db mysql -u root -p personal_disk
    ```
 
 ### API 接口
@@ -239,10 +239,10 @@ make build
 |------|------|------|------|
 | `POST` | `/api/login` | 用户登录 | 否 |
 | `POST` | `/api/upload` | 上传文件 | 是 |
-| `GET` | `/api/files` | 获取文件列表 | 是 |
-| `GET` | `/api/download/{id}` | 下载文件 | 是 |
+| `GET` | `/api/files` | 获取文件列表 | 否 |
+| `GET` | `/api/download/{id}` | 下载文件 | 否 |
 | `DELETE` | `/api/delete/{id}` | 删除文件 | 是 |
-| `PUT` | `/api/rename/{id}` | 重命名文件 | 是 |
+| `POST/PUT` | `/api/rename/{id}` | 重命名文件 | 是 |
 
 ## 📊 性能特性
 

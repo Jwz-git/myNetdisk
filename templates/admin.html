@@ -8,12 +8,24 @@
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>管理面板</h1>
+        <header class="page-header">
+            <div class="brand">
+                <span class="brand-mark" aria-hidden="true"></span>
+                <div>
+                    <p class="brand-label">Personal Disk</p>
+                    <h1>管理面板</h1>
+                </div>
+            </div>
+            <nav class="header-actions" aria-label="页面导航">
+                <a href="/" class="nav-link">公开页</a>
+                <a href="/logout" class="nav-link nav-link-muted">退出</a>
+            </nav>
         </header>
         
         <section class="upload-section">
-            <h2>文件</h2>
+            <div class="section-heading">
+                <h2>上传</h2>
+            </div>
             <form id="upload-form" class="upload-form">
                 <div class="file-input">
                     <input type="file" id="file-input" name="files" multiple>
@@ -30,7 +42,9 @@
         </section>
         
         <section class="file-list-section">
-            <h2>文件列表</h2>
+            <div class="section-heading">
+                <h2>文件列表</h2>
+            </div>
             <div class="search-container">
                 <input type="text" id="search-input" placeholder="搜索文件名..." class="search-input">
                 <button id="search-btn" class="search-btn">搜索</button>

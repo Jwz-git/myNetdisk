@@ -5,7 +5,7 @@ services:
     container_name: personal_disk_db_prod
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
       MYSQL_DATABASE: ${DB_NAME:-personal_disk}
     volumes:
       - mysql-prod-data:/var/lib/mysql
@@ -32,7 +32,7 @@ services:
       DB_HOST: db
       DB_PORT: 3306
       DB_USER: root
-      DB_PASSWORD: ${DB_PASSWORD}
+      DB_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
       DB_NAME: ${DB_NAME:-personal_disk}
 
       # 服务器配置
@@ -40,8 +40,8 @@ services:
       SERVER_PORT: 8080
 
       # 管理员配置（必须通过环境变量设置）
-      ADMIN_USERNAME: ${ADMIN_USERNAME}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}
 
       # 上传配置
       UPLOAD_DIRECTORY: uploads

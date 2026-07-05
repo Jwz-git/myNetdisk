@@ -63,7 +63,7 @@ func startServer(cfg *config.Config) {
 	fmt.Printf("当前时间: %s\n", model.GetCurrentTime())
 
 	// 启动服务器
-	log.Fatal(http.ListenAndServe(addr, nil))
+	log.Fatal(http.ListenAndServe(addr, secureHandler(cfg, http.DefaultServeMux)))
 }
 
 // setupRoutes 设置路由
@@ -74,12 +74,13 @@ func setupRoutes(cfg *config.Config) {
 			http.FileServer(http.Dir(cfg.Static.Directory))))
 
 	// API 路由
-	http.HandleFunc("/api/upload", controller.UploadHandler)
+	http.HandleFunc("/api/upload", controller.RequireLogin(controller.UploadHandler))
 	http.HandleFunc("/api/files", controller.ListFilesHandler)
 	http.HandleFunc("/api/download/", controller.DownloadHandler)
-	http.HandleFunc("/api/delete/", controller.DeleteHandler)
-	http.HandleFunc("/api/rename/", controller.RenameHandler)
+	http.HandleFunc("/api/delete/", controller.RequireLogin(controller.DeleteHandler))
+	http.HandleFunc("/api/rename/", controller.RequireLogin(controller.RenameHandler))
 	http.HandleFunc("/api/login", controller.LoginHandler)
+	http.HandleFunc("/logout", controller.LogoutHandler)
 
 	// 页面路由
 	http.HandleFunc("/admin", controller.AdminHandler)

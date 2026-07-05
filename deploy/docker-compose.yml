@@ -7,8 +7,6 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
       MYSQL_DATABASE: ${DB_NAME:-personal_disk}
-      MYSQL_USER: ${DB_USER:-}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-}
     volumes:
       - mysql-data:/var/lib/mysql
       - ./mysql-config:/etc/mysql/conf.d
@@ -31,7 +29,7 @@ services:
     restart: unless-stopped
     environment:
       # 应用环境
-      APP_ENV: ${APP_ENV:-production}
+      APP_ENV: ${APP_ENV:-development}
 
       # 数据库配置（通过环境变量覆盖）
       DB_HOST: db
@@ -44,9 +42,9 @@ services:
       SERVER_HOST: ${SERVER_HOST:-0.0.0.0}
       SERVER_PORT: ${SERVER_PORT:-8080}
 
-      # 管理员配置（生产环境必须设置）
+      # 管理员配置
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-dev123456}
 
       # 上传配置
       UPLOAD_DIRECTORY: ${UPLOAD_DIRECTORY:-uploads}

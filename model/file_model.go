@@ -1,19 +1,19 @@
 package model
 
 import (
-    "time"
 	"database/sql"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql" // 导入 MySQL 驱动，下划线表示只执行 init 函数
 	"log"
+	"time"
 )
 
 type FileInfo struct {
-	ID         int          `json:"id"`
-	FileName   string       `json:"file_name"`
-	FilePath   string       `json:"file_path"`
-	FileSize   int64        `json:"file_size"`
-	UpdateTime time.Time    `json:"update_time"`
+	ID         int       `json:"id"`
+	FileName   string    `json:"file_name"`
+	FilePath   string    `json:"file_path"`
+	FileSize   int64     `json:"file_size"`
+	UpdateTime time.Time `json:"update_time"`
 }
 
 // 全局数据库连接对象，方便其他函数使用
@@ -71,37 +71,37 @@ func initTables() error {
 }
 
 func GetAllFileInfos() ([]FileInfo, error) {
-    cursor, err := DB.Query("SELECT id, file_name, file_path, file_size, update_time FROM file_info ORDER BY update_time DESC")
-    if err != nil{
-        fmt.Printf("查询文件信息失败: %v\n", err)
-        return nil, err
-    }
-    defer cursor.Close()
+	cursor, err := DB.Query("SELECT id, file_name, file_path, file_size, update_time FROM file_info ORDER BY update_time DESC")
+	if err != nil {
+		fmt.Printf("查询文件信息失败: %v\n", err)
+		return nil, err
+	}
+	defer cursor.Close()
 
-    fileinfos := make([]FileInfo,0)
+	fileinfos := make([]FileInfo, 0)
 
-    for cursor.Next(){
-        var f FileInfo
-        err := cursor.Scan(&f.ID, &f.FileName, &f.FilePath, &f.FileSize, &f.UpdateTime)
-        if err != nil{
-            fmt.Printf("扫描文件信息失败: %v\n", err)
-            return nil, err
-        }
-        fileinfos = append(fileinfos, f)
-    }
+	for cursor.Next() {
+		var f FileInfo
+		err := cursor.Scan(&f.ID, &f.FileName, &f.FilePath, &f.FileSize, &f.UpdateTime)
+		if err != nil {
+			fmt.Printf("扫描文件信息失败: %v\n", err)
+			return nil, err
+		}
+		fileinfos = append(fileinfos, f)
+	}
 
-     if err = cursor.Err(); err != nil {
-        fmt.Printf("遍历结果集失败: %v\n", err)
-        return nil, fmt.Errorf("遍历结果集错误: %v", err)
-    }
+	if err = cursor.Err(); err != nil {
+		fmt.Printf("遍历结果集失败: %v\n", err)
+		return nil, fmt.Errorf("遍历结果集错误: %v", err)
+	}
 
-    return fileinfos, nil
+	return fileinfos, nil
 }
 
-func GetFileInfoByID(id string) (FileInfo,error){
+func GetFileInfoByID(id string) (FileInfo, error) {
 	var f FileInfo
-	cursor,err := DB.Query("SELECT id, file_name, file_path, file_size, update_time FROM file_info WHERE id = ?", id)
-	if err != nil{
+	cursor, err := DB.Query("SELECT id, file_name, file_path, file_size, update_time FROM file_info WHERE id = ?", id)
+	if err != nil {
 		fmt.Printf("查询文件信息失败: %v\n", err)
 		return FileInfo{}, err
 	}
@@ -127,8 +127,8 @@ func JudgeFileExists(fileName string) (bool, error) {
 }
 
 func AddFileInfo(fileName, filePath string, fileSize int64) error {
-    _,err := DB.Exec("INSERT INTO file_info (file_name, file_path, file_size, update_time) VALUES (?, ?, ?, ?)", fileName, filePath, fileSize, time.Now())
-    return err
+	_, err := DB.Exec("INSERT INTO file_info (file_name, file_path, file_size, update_time) VALUES (?, ?, ?, ?)", fileName, filePath, fileSize, time.Now())
+	return err
 }
 
 func DeleteFileInfoByID(id string) error {
@@ -136,8 +136,8 @@ func DeleteFileInfoByID(id string) error {
 	return err
 }
 
-func RenameFileInfoByID(id, newName string) error {
-	_, err := DB.Exec("UPDATE file_info SET file_name = ?, file_path = ?, update_time = ? WHERE id = ?", newName, "uploads/"+newName, time.Now(), id)
+func RenameFileInfoByID(id, newName, newPath string) error {
+	_, err := DB.Exec("UPDATE file_info SET file_name = ?, file_path = ?, update_time = ? WHERE id = ?", newName, newPath, time.Now(), id)
 	return err
 }
 

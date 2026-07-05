@@ -117,7 +117,6 @@ docker system prune -f
 - [完整文档](README.md)
 - [配置说明](docs/CONFIG.md)
 - [项目结构](docs/STRUCTURE.md)
-- [贡献指南](docs/CONTRIBUTING.md)
 
 ## 🤝 获取支持
 

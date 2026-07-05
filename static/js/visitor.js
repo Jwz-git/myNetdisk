@@ -1,11 +1,29 @@
+const escapeHTML = (value) => String(value).replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+}[char]));
+
 // 搜索功能
 let allFiles = [];
 
 // 加载文件列表并保存到全局变量
 async function loadFiles() {
-    const res = await fetch('/api/files');
-    allFiles = await res.json();
     const listEl = document.getElementById('file-list');
+    try {
+        const res = await fetch('/api/files');
+        if (!res.ok) {
+            throw new Error('加载文件列表失败');
+        }
+        allFiles = await res.json();
+    } catch (error) {
+        allFiles = [];
+        listEl.innerHTML = '<li class="empty-message">暂无文件</li>';
+        return;
+    }
+
     if (allFiles.length === 0) {
         listEl.innerHTML = '<li class="empty-message">暂无文件</li>';
         return;
@@ -33,20 +51,23 @@ function renderFiles(files) {
         return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
     };
 
-    listEl.innerHTML = files.map(f => `
+    listEl.innerHTML = files.map(f => {
+        const safeFileName = escapeHTML(f.file_name);
+        return `
         <li class="file-item">
             <div class="file-info">
-                <div class="file-name">${f.file_name}</div>
+                <div class="file-name">${safeFileName}</div>
                 <div class="file-meta">
                     <span class="file-size">${formatFileSize(f.file_size)}</span>
                     <span class="file-time">更新时间：${new Date(f.update_time).toLocaleString()}</span>
                 </div>
             </div>
             <div class="file-actions">
-                <a href="/api/download/${f.id}" class="download-btn" download="${f.file_name}">下载</a>
+                <a href="/api/download/${f.id}" class="download-btn" download="${safeFileName}">下载</a>
             </div>
         </li>
-    `).join('');
+    `;
+    }).join('');
 }
 
 // 搜索文件

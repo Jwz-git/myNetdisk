@@ -7,7 +7,7 @@ database:
   port: "3306"
   user: "root"
   password: ""
-  name: "personal_disk_dev"
+  name: "personal_disk"
   charset: "utf8mb4"
   parseTime: true
   location: "Local"

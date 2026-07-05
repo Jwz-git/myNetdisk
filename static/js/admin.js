@@ -1,16 +1,29 @@
+const escapeHTML = (value) => String(value).replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;'
+}[char]));
+
 const deleteFile = async (id) => {
     if (!confirm('确定要删除这个文件吗？')) return;
-    fetch(`/api/delete/${id}`, { method: 'DELETE' })  // 建议使用 DELETE 方法
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                window.location.href = '/admin'; // 手动跳转
-            } else {
-                alert('删除失败');
-            }
-        });
 
-    loadFiles(); // 刷新列表
+    try {
+        const response = await fetch(`/api/delete/${id}`, { method: 'DELETE' });
+        const data = response.headers.get('Content-Type')?.includes('application/json')
+            ? await response.json()
+            : { success: false, error: await response.text() };
+
+        if (data.success) {
+            loadFiles();
+        } else {
+            alert('删除失败：' + (data.error || '未知错误'));
+        }
+    } catch (error) {
+        alert('网络错误，请稍后重试');
+        console.error('删除失败:', error);
+    }
 }
 
 // 上传文件
@@ -48,12 +61,12 @@ document.getElementById('upload-form').addEventListener('submit', async (e) => {
 });
 
 // 重命名功能
-function startRename(id, nameWithoutExt, extension) {
+function startRename(id) {
     // 隐藏文件名和重命名按钮
     document.getElementById(`file-name-${id}`).style.display = 'none';
     document.querySelector(`#save-btn-${id}`).style.display = 'none';
     document.querySelector(`#cancel-btn-${id}`).style.display = 'none';
-    document.querySelector(`.edit-btn[onclick="startRename('${id}', '${nameWithoutExt}', '${extension}')"]`).style.display = 'none';
+    document.getElementById(`edit-btn-${id}`).style.display = 'none';
     
     // 显示输入框和保存/取消按钮
     document.getElementById(`rename-container-${id}`).style.display = 'flex';
@@ -74,7 +87,7 @@ function cancelRename(id) {
     
     // 显示文件名和重命名按钮
     document.getElementById(`file-name-${id}`).style.display = 'block';
-    const editBtn = document.querySelector(`.edit-btn[onclick^="startRename('${id}'"]`);
+    const editBtn = document.getElementById(`edit-btn-${id}`);
     if (editBtn) {
         editBtn.style.display = 'inline-block';
     }
@@ -131,9 +144,19 @@ let selectedFilesList = [];
 
 // 加载文件列表并保存到全局变量
 async function loadFiles() {
-    const res = await fetch('/api/files');
-    allFiles = await res.json();
     const listEl = document.getElementById('file-list');
+    try {
+        const res = await fetch('/api/files');
+        if (!res.ok) {
+            throw new Error('加载文件列表失败');
+        }
+        allFiles = await res.json();
+    } catch (error) {
+        allFiles = [];
+        listEl.innerHTML = '<li class="empty-message">暂无文件</li>';
+        return;
+    }
+
     if (allFiles.length === 0) {
         listEl.innerHTML = '<li class="empty-message">暂无文件</li>';
         return;
@@ -176,20 +199,23 @@ function renderFiles(files) {
         const lastDotIndex = f.file_name.lastIndexOf('.');
         const nameWithoutExt = lastDotIndex > -1 ? f.file_name.substring(0, lastDotIndex) : f.file_name;
         const extension = lastDotIndex > -1 ? f.file_name.substring(lastDotIndex) : '';
+        const safeFileName = escapeHTML(f.file_name);
+        const safeNameWithoutExt = escapeHTML(nameWithoutExt);
+        const safeExtension = escapeHTML(extension);
         
         return `
         <li class="file-item">
             <div class="file-info">
-                <div style="display:flex; align-items: center;">
-                    <div class="file-name" id="file-name-${f.id}">${f.file_name}</div>
-                    <div class="rename-input-container" id="rename-container-${f.id}" style="display: none; align-items: center;">
-                        <input type="text" id="rename-input-${f.id}" value="${nameWithoutExt}" style="padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; margin-right: 8px;">
-                        <span class="file-extension" style="font-size: 14px; color: #6c757d;">${extension}</span>
+                <div class="file-name-row">
+                    <div class="file-name" id="file-name-${f.id}">${safeFileName}</div>
+                    <div class="rename-input-container" id="rename-container-${f.id}">
+                        <input type="text" id="rename-input-${f.id}" value="${safeNameWithoutExt}">
+                        <span class="file-extension">${safeExtension}</span>
                     </div>
                     <div class="edit-buttons">
-                        <a href="javascript:void(0);" class="edit-btn" onclick="startRename('${f.id}', '${nameWithoutExt}', '${extension}')">重命名</a>
-                        <a href="javascript:void(0);" class="save-btn" id="save-btn-${f.id}" style="display: none; margin-left: 8px;" onclick="saveRename('${f.id}')">保存</a>
-                        <a href="javascript:void(0);" class="cancel-btn" id="cancel-btn-${f.id}" style="display: none; margin-left: 8px;" onclick="cancelRename('${f.id}')">取消</a>
+                        <a href="javascript:void(0);" class="edit-btn" id="edit-btn-${f.id}" onclick="startRename('${f.id}')">重命名</a>
+                        <a href="javascript:void(0);" class="save-btn" id="save-btn-${f.id}" onclick="saveRename('${f.id}')">保存</a>
+                        <a href="javascript:void(0);" class="cancel-btn" id="cancel-btn-${f.id}" onclick="cancelRename('${f.id}')">取消</a>
                     </div>
                 </div>
                 <div class="file-meta">
@@ -198,7 +224,7 @@ function renderFiles(files) {
                 </div>
             </div>
             <div class="file-actions">
-                <a href="/api/download/${f.id}" class="download-btn" download="${f.file_name}">下载</a>
+                <a href="/api/download/${f.id}" class="download-btn" download="${safeFileName}">下载</a>
                 <a href="javascript:void(0);" class="delete-btn" onclick="deleteFile('${f.id}')">删除</a>
             </div>
         </li>
@@ -262,7 +288,7 @@ function showSelectedFiles() {
         const file = selectedFilesList[i];
         html += `
             <li class="selected-file-item">
-                <span class="selected-file-name">${file.name}</span>
+                <span class="selected-file-name">${escapeHTML(file.name)}</span>
                 <span class="selected-file-size">${formatFileSize(file.size)}</span>
                 <button type="button" class="remove-file-btn" onclick="removeFile(${i})">移除</button>
             </li>

@@ -8,12 +8,23 @@
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>个人网盘</h1>
+        <header class="page-header">
+            <div class="brand">
+                <span class="brand-mark" aria-hidden="true"></span>
+                <div>
+                    <p class="brand-label">Personal Disk</p>
+                    <h1>个人网盘</h1>
+                </div>
+            </div>
+            <nav class="header-actions" aria-label="页面导航">
+                <a href="/login" class="nav-link">管理</a>
+            </nav>
         </header>
         
         <section class="file-list-section">
-            <h2>文件</h2>
+            <div class="section-heading">
+                <h2>文件</h2>
+            </div>
             <div class="search-container">
                 <input type="text" id="search-input" placeholder="搜索文件名..." class="search-input">
                 <button id="search-btn" class="search-btn">搜索</button>
