@@ -28,7 +28,17 @@
             </div>
             <form id="upload-form" class="upload-form">
                 <div class="file-input">
-                    <input type="file" id="file-input" name="files" multiple>
+                    <div class="file-picker" id="file-picker">
+                        <button type="button" class="file-picker-trigger" id="file-picker-trigger" aria-haspopup="menu" aria-expanded="false">
+                            选择文件或文件夹
+                        </button>
+                        <div class="file-picker-menu" id="file-picker-menu" role="menu">
+                            <button type="button" id="select-files-btn" role="menuitem">选择文件</button>
+                            <button type="button" id="select-folder-btn" role="menuitem">选择文件夹</button>
+                        </div>
+                        <input type="file" id="file-input" name="files" class="file-picker-input" multiple>
+                        <input type="file" id="folder-input" class="file-picker-input" webkitdirectory directory multiple>
+                    </div>
                 </div>
                 <div id="selected-files" class="selected-files">
                     <!-- 所选文件列表将由JavaScript动态生成 -->

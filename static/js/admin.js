@@ -6,8 +6,11 @@ const escapeHTML = (value) => String(value).replace(/[&<>"']/g, (char) => ({
     "'": '&#39;'
 }[char]));
 
-const deleteFile = async (id) => {
-    if (!confirm('确定要删除这个文件吗？')) return;
+const getUploadPath = (file) => file.webkitRelativePath || file.name;
+
+const deleteFile = async (id, isDir = false) => {
+    const message = isDir ? '确定要删除这个文件夹及其中内容吗？' : '确定要删除这个文件吗？';
+    if (!confirm(message)) return;
 
     try {
         const response = await fetch(`/api/delete/${id}`, { method: 'DELETE' });
@@ -37,7 +40,9 @@ document.getElementById('upload-form').addEventListener('submit', async (e) => {
     
     const formData = new FormData();
     for (let i = 0; i < selectedFilesList.length; i++) {
-        formData.append('files', selectedFilesList[i]);
+        const file = selectedFilesList[i];
+        formData.append('files', file);
+        formData.append('paths', getUploadPath(file));
     }
     
     const statusEl = document.getElementById('upload-status');
@@ -196,15 +201,18 @@ function renderFiles(files) {
     };
 
     listEl.innerHTML = files.map(f => {
-        const lastDotIndex = f.file_name.lastIndexOf('.');
+        const isDir = Boolean(f.is_dir);
+        const lastDotIndex = isDir ? -1 : f.file_name.lastIndexOf('.');
         const nameWithoutExt = lastDotIndex > -1 ? f.file_name.substring(0, lastDotIndex) : f.file_name;
         const extension = lastDotIndex > -1 ? f.file_name.substring(lastDotIndex) : '';
         const safeFileName = escapeHTML(f.file_name);
         const safeNameWithoutExt = escapeHTML(nameWithoutExt);
         const safeExtension = escapeHTML(extension);
+        const kindText = isDir ? '文件夹' : '文件';
+        const downloadName = isDir ? `${safeFileName}.zip` : safeFileName;
         
         return `
-        <li class="file-item">
+        <li class="file-item${isDir ? ' folder-item' : ''}">
             <div class="file-info">
                 <div class="file-name-row">
                     <div class="file-name" id="file-name-${f.id}">${safeFileName}</div>
@@ -219,13 +227,14 @@ function renderFiles(files) {
                     </div>
                 </div>
                 <div class="file-meta">
+                    <span class="file-kind">${kindText}</span>
                     <span class="file-size">${formatFileSize(f.file_size)}</span>
                     <span class="file-time">更新时间：${new Date(f.update_time).toLocaleString()}</span>
                 </div>
             </div>
             <div class="file-actions">
-                <a href="/api/download/${f.id}" class="download-btn" download="${safeFileName}">下载</a>
-                <a href="javascript:void(0);" class="delete-btn" onclick="deleteFile('${f.id}')">删除</a>
+                <a href="/api/download/${f.id}" class="download-btn" download="${downloadName}">下载</a>
+                <a href="javascript:void(0);" class="delete-btn" onclick="deleteFile('${f.id}', ${isDir})">删除</a>
             </div>
         </li>
     `;
@@ -286,9 +295,10 @@ function showSelectedFiles() {
     let html = '<h3>所选文件 (' + selectedFilesList.length + ')</h3><ul>';
     for (let i = 0; i < selectedFilesList.length; i++) {
         const file = selectedFilesList[i];
+        const uploadPath = getUploadPath(file);
         html += `
             <li class="selected-file-item">
-                <span class="selected-file-name">${escapeHTML(file.name)}</span>
+                <span class="selected-file-name">${escapeHTML(uploadPath)}</span>
                 <span class="selected-file-size">${formatFileSize(file.size)}</span>
                 <button type="button" class="remove-file-btn" onclick="removeFile(${i})">移除</button>
             </li>
@@ -306,28 +316,68 @@ function removeFile(index) {
 
 // 初始化文件选择事件
 function initFileInput() {
+    const picker = document.getElementById('file-picker');
+    const trigger = document.getElementById('file-picker-trigger');
+    const selectFilesBtn = document.getElementById('select-files-btn');
+    const selectFolderBtn = document.getElementById('select-folder-btn');
     const fileInput = document.getElementById('file-input');
-    fileInput.addEventListener('change', () => {
-        const files = fileInput.files;
+    const folderInput = document.getElementById('folder-input');
+
+    const closePicker = () => {
+        picker.classList.remove('is-open');
+        trigger.setAttribute('aria-expanded', 'false');
+    };
+
+    const togglePicker = () => {
+        const isOpen = picker.classList.toggle('is-open');
+        trigger.setAttribute('aria-expanded', String(isOpen));
+    };
+
+    const addFilesFromInput = (input) => {
+        const files = input.files;
         for (let i = 0; i < files.length; i++) {
+            const uploadPath = getUploadPath(files[i]);
             // 检查文件是否已经存在
             const isDuplicate = selectedFilesList.some(existingFile => 
-                existingFile.name === files[i].name && existingFile.size === files[i].size
+                getUploadPath(existingFile) === uploadPath && existingFile.size === files[i].size
             );
             if (!isDuplicate) {
                 selectedFilesList.push(files[i]);
             }
         }
         // 重置文件输入，以便可以再次选择相同的文件
-        fileInput.value = '';
+        input.value = '';
         showSelectedFiles();
+    };
+
+    trigger.addEventListener('click', togglePicker);
+    selectFilesBtn.addEventListener('click', () => {
+        closePicker();
+        fileInput.click();
     });
+    selectFolderBtn.addEventListener('click', () => {
+        closePicker();
+        folderInput.click();
+    });
+    document.addEventListener('click', (event) => {
+        if (!picker.contains(event.target)) {
+            closePicker();
+        }
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closePicker();
+        }
+    });
+    fileInput.addEventListener('change', () => addFilesFromInput(fileInput));
+    folderInput.addEventListener('change', () => addFilesFromInput(folderInput));
 }
 
 // 初始化清空按钮
 function initClearButton() {
     document.getElementById('clear-btn').addEventListener('click', () => {
         document.getElementById('file-input').value = '';
+        document.getElementById('folder-input').value = '';
         document.getElementById('upload-status').textContent = '';
         selectedFilesList = [];
         showSelectedFiles();

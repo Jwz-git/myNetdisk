@@ -52,18 +52,22 @@ function renderFiles(files) {
     };
 
     listEl.innerHTML = files.map(f => {
+        const isDir = Boolean(f.is_dir);
         const safeFileName = escapeHTML(f.file_name);
+        const kindText = isDir ? '文件夹' : '文件';
+        const downloadName = isDir ? `${safeFileName}.zip` : safeFileName;
         return `
-        <li class="file-item">
+        <li class="file-item${isDir ? ' folder-item' : ''}">
             <div class="file-info">
                 <div class="file-name">${safeFileName}</div>
                 <div class="file-meta">
+                    <span class="file-kind">${kindText}</span>
                     <span class="file-size">${formatFileSize(f.file_size)}</span>
                     <span class="file-time">更新时间：${new Date(f.update_time).toLocaleString()}</span>
                 </div>
             </div>
             <div class="file-actions">
-                <a href="/api/download/${f.id}" class="download-btn" download="${safeFileName}">下载</a>
+                <a href="/api/download/${f.id}" class="download-btn" download="${downloadName}">下载</a>
             </div>
         </li>
     `;

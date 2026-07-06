@@ -174,16 +174,14 @@ h2 {
     background: #f5f9fc;
 }
 
-.file-input input[type="file"] {
-    width: 100%;
-    color: var(--muted);
-    font-size: 14px;
-    text-align: center;
+.file-picker {
+    position: relative;
+    display: inline-flex;
 }
 
-.file-input input[type="file"]::file-selector-button {
-    margin-right: 12px;
-    padding: 9px 14px;
+.file-picker-trigger {
+    min-height: 44px;
+    padding: 0 18px;
     border: 1px solid var(--line-strong);
     border-radius: 6px;
     background: var(--surface);
@@ -192,11 +190,59 @@ h2 {
     font-size: 14px;
     font-weight: 700;
     cursor: pointer;
+    box-shadow: 0 8px 20px rgba(28, 38, 52, 0.08);
+    transition: border-color 160ms ease, color 160ms ease, box-shadow 160ms ease;
 }
 
-.file-input input[type="file"]::file-selector-button:hover {
+.file-picker-trigger:hover,
+.file-picker-trigger:focus {
+    outline: none;
     border-color: var(--accent);
     color: var(--accent);
+}
+
+.file-picker-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    z-index: 10;
+    min-width: 180px;
+    display: none;
+    padding: 6px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    transform: translateX(-50%);
+}
+
+.file-picker.is-open .file-picker-menu {
+    display: grid;
+    gap: 4px;
+}
+
+.file-picker-menu button {
+    min-height: 36px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--ink);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+}
+
+.file-picker-menu button:hover,
+.file-picker-menu button:focus {
+    outline: none;
+    background: var(--accent-soft);
+}
+
+.file-picker-input {
+    display: none;
 }
 
 .selected-files {
@@ -396,6 +442,11 @@ h2 {
     flex-wrap: wrap;
     gap: 8px 18px;
     margin-top: 7px;
+}
+
+.file-kind {
+    color: var(--accent);
+    font-weight: 700;
 }
 
 .file-actions,

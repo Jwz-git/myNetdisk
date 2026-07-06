@@ -231,6 +231,11 @@ h2 {
     font-size: 13px;
 }
 
+.file-kind {
+    color: var(--accent);
+    font-weight: 700;
+}
+
 .file-actions {
     display: flex;
     align-items: center;
