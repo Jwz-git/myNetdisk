@@ -8,320 +8,351 @@ const escapeHTML = (value) => String(value).replace(/[&<>"']/g, (char) => ({
 
 const getUploadPath = (file) => file.webkitRelativePath || file.name;
 
-const deleteFile = async (id, isDir = false) => {
-    const message = isDir ? '确定要删除这个文件夹及其中内容吗？' : '确定要删除这个文件吗？';
-    if (!confirm(message)) return;
+const formatFileSize = (bytes) => {
+    const size = Number(bytes) || 0;
+    if (size < 1024) return `${size} B`;
+    if (size < 1024 ** 2) return `${(size / 1024).toFixed(1)} KB`;
+    if (size < 1024 ** 3) return `${(size / 1024 ** 2).toFixed(1)} MB`;
+    return `${(size / 1024 ** 3).toFixed(1)} GB`;
+};
 
-    try {
-        const response = await fetch(`/api/delete/${id}`, { method: 'DELETE' });
-        const data = response.headers.get('Content-Type')?.includes('application/json')
-            ? await response.json()
-            : { success: false, error: await response.text() };
+const formatUpdateTime = (value) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '更新时间未知';
+    return `更新于 ${new Intl.DateTimeFormat('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    }).format(date)}`;
+};
 
-        if (data.success) {
-            loadFiles();
-        } else {
-            alert('删除失败：' + (data.error || '未知错误'));
-        }
-    } catch (error) {
-        alert('网络错误，请稍后重试');
-        console.error('删除失败:', error);
-    }
+const getFileCategory = (fileName, isDir) => {
+    if (isDir) return 'folder';
+    const extension = String(fileName).split('.').pop().toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'heic', 'bmp'].includes(extension)) return 'image';
+    if (['zip', 'rar', '7z', 'tar', 'gz', 'bz2'].includes(extension)) return 'archive';
+    if (['mp3', 'wav', 'flac', 'aac', 'm4a', 'ogg'].includes(extension)) return 'audio';
+    if (['mp4', 'mov', 'mkv', 'avi', 'webm', 'm4v'].includes(extension)) return 'video';
+    if (['js', 'ts', 'jsx', 'tsx', 'html', 'css', 'go', 'py', 'java', 'json', 'yml', 'yaml', 'md'].includes(extension)) return 'code';
+    return 'document';
+};
+
+const getFileIcon = (category) => {
+    const icons = {
+        folder: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 6.5h7l2 2.5h8v9.5h-17z"></path><path d="M3.5 9h17"></path></svg>',
+        image: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"></rect><circle cx="9" cy="9" r="1.5"></circle><path d="m6 17 4.2-4.5 3.1 3 2.2-2.1L19 17"></path></svg>',
+        archive: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16H6z"></path><path d="M9 4v3h3V4m-3 6h3v3H9m0 3h3v4"></path></svg>',
+        audio: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 17.5V7l9-2v10.5"></path><circle cx="6.5" cy="17.5" r="2.5"></circle><circle cx="15.5" cy="15.5" r="2.5"></circle></svg>',
+        video: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2"></rect><path d="m10 9 5 3-5 3z"></path></svg>',
+        code: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 7-5 5 5 5m6-10 5 5-5 5m-2-12-2 14"></path></svg>',
+        document: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h8l4 4V20H6z"></path><path d="M14 3.5v4h4M9 12h6m-6 3h6"></path></svg>'
+    };
+    return icons[category] || icons.document;
+};
+
+const getKindLabel = (fileName, isDir) => {
+    if (isDir) return '文件夹';
+    const parts = String(fileName).split('.');
+    return parts.length > 1 ? parts.pop().toUpperCase() : '文件';
+};
+
+let allFiles = [];
+let selectedFilesList = [];
+
+function setUploadStatus(message, state = 'idle') {
+    const status = document.getElementById('upload-status');
+    status.textContent = message;
+    status.dataset.state = state;
 }
 
-// 上传文件
-document.getElementById('upload-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    if (selectedFilesList.length === 0) {
-        document.getElementById('upload-status').textContent = '请先选择文件';
+function notify(message, type = 'success') {
+    const region = document.getElementById('toast-region');
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `
+        <span class="toast-dot" aria-hidden="true"></span>
+        <span>${escapeHTML(message)}</span>
+    `;
+    region.appendChild(toast);
+
+    window.setTimeout(() => {
+        toast.classList.add('is-leaving');
+        toast.addEventListener('animationend', () => toast.remove(), { once: true });
+    }, 2800);
+}
+
+function updateFileStats() {
+    const totalSize = allFiles.reduce((sum, file) => sum + (Number(file.file_size) || 0), 0);
+    document.getElementById('file-total').textContent = String(allFiles.length);
+    document.getElementById('storage-total').textContent = formatFileSize(totalSize);
+}
+
+function updateResultCount(count) {
+    document.getElementById('result-count').textContent = String(count);
+}
+
+async function loadFiles() {
+    const listEl = document.getElementById('file-list');
+    listEl.setAttribute('aria-busy', 'true');
+
+    try {
+        const response = await fetch('/api/files');
+        if (!response.ok) throw new Error('加载文件列表失败');
+        const result = await response.json();
+        allFiles = Array.isArray(result) ? result : [];
+    } catch (error) {
+        allFiles = [];
+        listEl.innerHTML = '<li class="empty-message error-message">文件目录暂时无法加载，请稍后刷新</li>';
+        updateFileStats();
+        updateResultCount(0);
+        listEl.setAttribute('aria-busy', 'false');
         return;
     }
-    
-    const formData = new FormData();
-    for (let i = 0; i < selectedFilesList.length; i++) {
-        const file = selectedFilesList[i];
-        formData.append('files', file);
-        formData.append('paths', getUploadPath(file));
-    }
-    
-    const statusEl = document.getElementById('upload-status');
-    statusEl.textContent = '上传中...';
-    try {
-        const res = await fetch('/api/upload', { method: 'POST', body: formData });
-        const result = await res.json();
-        if (result.success) {
-            statusEl.textContent = '上传成功！';
-            loadFiles(); // 刷新列表
-            selectedFilesList = []; // 清空选择
-            showSelectedFiles(); // 更新显示
-        } else {
-            statusEl.textContent = '上传失败：' + result.error;
-        }
-    } catch (err) {
-        statusEl.textContent = '网络错误';
+
+    updateFileStats();
+    renderFiles(allFiles, '目录还是空的，从左侧上传第一个文件吧');
+    listEl.setAttribute('aria-busy', 'false');
+}
+
+function renderFiles(files, emptyText = '没有找到匹配的文件') {
+    const listEl = document.getElementById('file-list');
+    updateResultCount(files.length);
+
+    if (files.length === 0) {
+        listEl.innerHTML = `<li class="empty-message">${emptyText}</li>`;
+        return;
     }
 
-    loadFiles(); // 刷新列表
-});
+    listEl.innerHTML = files.map((file) => {
+        const isDir = Boolean(file.is_dir);
+        const fileName = String(file.file_name);
+        const lastDotIndex = isDir ? -1 : fileName.lastIndexOf('.');
+        const nameWithoutExt = lastDotIndex > 0 ? fileName.substring(0, lastDotIndex) : fileName;
+        const extension = lastDotIndex > 0 ? fileName.substring(lastDotIndex) : '';
+        const safeFileName = escapeHTML(fileName);
+        const safeNameWithoutExt = escapeHTML(nameWithoutExt);
+        const safeExtension = escapeHTML(extension);
+        const safeID = escapeHTML(file.id);
+        const category = getFileCategory(fileName, isDir);
+        const kindText = getKindLabel(fileName, isDir);
+        const downloadName = isDir ? `${safeFileName}.zip` : safeFileName;
+        const downloadURL = `/api/download/${encodeURIComponent(file.id)}`;
 
-// 重命名功能
-function startRename(id) {
-    // 隐藏文件名和重命名按钮
-    document.getElementById(`file-name-${id}`).style.display = 'none';
-    document.querySelector(`#save-btn-${id}`).style.display = 'none';
-    document.querySelector(`#cancel-btn-${id}`).style.display = 'none';
-    document.getElementById(`edit-btn-${id}`).style.display = 'none';
-    
-    // 显示输入框和保存/取消按钮
-    document.getElementById(`rename-container-${id}`).style.display = 'flex';
-    document.querySelector(`#save-btn-${id}`).style.display = 'inline-block';
-    document.querySelector(`#cancel-btn-${id}`).style.display = 'inline-block';
-    
-    // 聚焦输入框
-    const input = document.getElementById(`rename-input-${id}`);
+        return `
+            <li class="file-item${isDir ? ' folder-item' : ''}" data-file-id="${safeID}" data-is-dir="${isDir}">
+                <span class="file-icon file-icon-${category}" aria-hidden="true">${getFileIcon(category)}</span>
+                <div class="file-info">
+                    <div class="file-name-row">
+                        <div class="file-name" title="${safeFileName}">${safeFileName}</div>
+                        <div class="rename-input-container">
+                            <input type="text" value="${safeNameWithoutExt}" aria-label="新的文件名">
+                            <span class="file-extension">${safeExtension}</span>
+                        </div>
+                        <div class="edit-buttons">
+                            <button type="button" class="edit-btn" data-action="rename" aria-label="重命名 ${safeFileName}">重命名</button>
+                            <button type="button" class="save-btn" data-action="save" aria-label="保存 ${safeFileName} 的新名称">保存</button>
+                            <button type="button" class="cancel-btn" data-action="cancel" aria-label="取消重命名 ${safeFileName}">取消</button>
+                        </div>
+                    </div>
+                    <div class="file-meta">
+                        <span class="file-kind">${kindText}</span>
+                        <span class="file-size">${formatFileSize(file.file_size)}</span>
+                        <span class="file-time">${formatUpdateTime(file.update_time)}</span>
+                    </div>
+                </div>
+                <div class="file-actions">
+                    <a href="${downloadURL}" class="download-btn" download="${downloadName}" aria-label="下载 ${safeFileName}">
+                        <svg viewBox="0 0 18 18" aria-hidden="true"><path d="M9 2.5v9m-3.5-3L9 12l3.5-3.5M3 15h12"></path></svg>
+                        下载
+                    </a>
+                    <button type="button" class="delete-btn" data-action="delete" aria-label="删除 ${safeFileName}">
+                        <svg viewBox="0 0 18 18" aria-hidden="true"><path d="M3.5 5h11M7 5V3h4v2m-6 0 .8 10h6.4L13 5M7.5 8v4.5m3-4.5v4.5"></path></svg>
+                        删除
+                    </button>
+                </div>
+            </li>
+        `;
+    }).join('');
+}
+
+function startRename(button) {
+    const row = button.closest('.file-item');
+    row.classList.add('is-renaming');
+    const input = row.querySelector('.rename-input-container input');
     input.focus();
     input.select();
 }
 
-function cancelRename(id) {
-    // 隐藏输入框和保存/取消按钮
-    document.getElementById(`rename-container-${id}`).style.display = 'none';
-    document.querySelector(`#save-btn-${id}`).style.display = 'none';
-    document.querySelector(`#cancel-btn-${id}`).style.display = 'none';
-    
-    // 显示文件名和重命名按钮
-    document.getElementById(`file-name-${id}`).style.display = 'block';
-    const editBtn = document.getElementById(`edit-btn-${id}`);
-    if (editBtn) {
-        editBtn.style.display = 'inline-block';
-    }
+function cancelRename(button) {
+    button.closest('.file-item').classList.remove('is-renaming');
 }
 
-async function saveRename(id) {
-    const input = document.getElementById(`rename-input-${id}`);
+async function saveRename(button) {
+    const row = button.closest('.file-item');
+    const input = row.querySelector('.rename-input-container input');
+    const extension = row.querySelector('.file-extension').textContent;
     const newNameWithoutExt = input.value.trim();
-    
+
     if (!newNameWithoutExt) {
-        alert('文件名不能为空');
+        notify('文件名不能为空', 'error');
+        input.focus();
         return;
     }
-    
-    // 获取扩展名
-    const extensionElement = document.querySelector(`#rename-container-${id} .file-extension`);
-    const extension = extensionElement.textContent;
-    
-    const newFileName = newNameWithoutExt + extension;
-    
+
+    button.disabled = true;
     try {
-        const response = await fetch(`/api/rename/${id}`, {
+        const response = await fetch(`/api/rename/${encodeURIComponent(row.dataset.fileId)}`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ file_name: newFileName })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ file_name: newNameWithoutExt + extension })
         });
-
-        // console.log('重命名请求响应:', response);
-        
         const result = await response.json();
-        if (result.success) {
-            // 更新文件名显示
-            document.getElementById(`file-name-${id}`).textContent = newFileName;
-            cancelRename(id);
-        } else {
-            alert('重命名失败：' + (result.error || '未知错误'));
-        }
-        // console.log('重命名结果:', result);
+        if (!result.success) throw new Error(result.error || '未知错误');
 
-        loadFiles(); // 刷新列表
-        
+        notify('重命名已保存');
+        await loadFiles();
     } catch (error) {
-        alert('网络错误，请稍后重试');
-        console.error('重命名失败:', error);
+        notify(`重命名失败：${error.message}`, 'error');
+        button.disabled = false;
     }
 }
 
-// 搜索功能
-let allFiles = [];
-// 存储所有选择的文件
-let selectedFilesList = [];
+function confirmDelete(isDir) {
+    const dialog = document.getElementById('confirm-dialog');
+    const message = isDir
+        ? '这个文件夹及其中的全部内容都会被永久删除。'
+        : '这个文件会被永久删除，此操作无法撤销。';
 
-// 加载文件列表并保存到全局变量
-async function loadFiles() {
-    const listEl = document.getElementById('file-list');
+    if (typeof dialog.showModal !== 'function') {
+        return Promise.resolve(window.confirm(message));
+    }
+
+    document.getElementById('confirm-message').textContent = message;
+    dialog.returnValue = '';
+    return new Promise((resolve) => {
+        dialog.addEventListener('close', () => resolve(dialog.returnValue === 'confirm'), { once: true });
+        dialog.showModal();
+    });
+}
+
+async function deleteFile(button) {
+    const row = button.closest('.file-item');
+    const confirmed = await confirmDelete(row.dataset.isDir === 'true');
+    if (!confirmed) return;
+
+    button.disabled = true;
     try {
-        const res = await fetch('/api/files');
-        if (!res.ok) {
-            throw new Error('加载文件列表失败');
-        }
-        allFiles = await res.json();
+        const response = await fetch(`/api/delete/${encodeURIComponent(row.dataset.fileId)}`, { method: 'DELETE' });
+        const result = response.headers.get('Content-Type')?.includes('application/json')
+            ? await response.json()
+            : { success: false, error: await response.text() };
+        if (!result.success) throw new Error(result.error || '未知错误');
+
+        notify('文件已删除');
+        await loadFiles();
     } catch (error) {
-        allFiles = [];
-        listEl.innerHTML = '<li class="empty-message">暂无文件</li>';
-        return;
+        notify(`删除失败：${error.message}`, 'error');
+        button.disabled = false;
     }
-
-    if (allFiles.length === 0) {
-        listEl.innerHTML = '<li class="empty-message">暂无文件</li>';
-        return;
-    }
-
-        const formatFileSize = (bytes) => {
-        if (bytes < 1024) {
-            return bytes + ' B';
-        } else if (bytes < 1024 * 1024) {
-            return (bytes / 1024).toFixed(2) + ' KB';
-        } else if (bytes < 1024 * 1024 * 1024) {
-            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-        }
-        return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
-    };
-
-    renderFiles(allFiles);
 }
 
-// 渲染文件列表
-function renderFiles(files) {
-    const listEl = document.getElementById('file-list');
-    if (files.length === 0) {
-        listEl.innerHTML = '<li class="empty-message">没有找到匹配的文件</li>';
-        return;
-    }
+function initFileActions() {
+    document.getElementById('file-list').addEventListener('click', (event) => {
+        const button = event.target.closest('button[data-action]');
+        if (!button) return;
 
-    const formatFileSize = (bytes) => {
-        if (bytes < 1024) {
-            return bytes + ' B';
-        } else if (bytes < 1024 * 1024) {
-            return (bytes / 1024).toFixed(2) + ' KB';
-        } else if (bytes < 1024 * 1024 * 1024) {
-            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-        }
-        return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
-    };
+        const actions = {
+            rename: startRename,
+            cancel: cancelRename,
+            save: saveRename,
+            delete: deleteFile
+        };
+        actions[button.dataset.action]?.(button);
+    });
 
-    listEl.innerHTML = files.map(f => {
-        const isDir = Boolean(f.is_dir);
-        const lastDotIndex = isDir ? -1 : f.file_name.lastIndexOf('.');
-        const nameWithoutExt = lastDotIndex > -1 ? f.file_name.substring(0, lastDotIndex) : f.file_name;
-        const extension = lastDotIndex > -1 ? f.file_name.substring(lastDotIndex) : '';
-        const safeFileName = escapeHTML(f.file_name);
-        const safeNameWithoutExt = escapeHTML(nameWithoutExt);
-        const safeExtension = escapeHTML(extension);
-        const kindText = isDir ? '文件夹' : '文件';
-        const downloadName = isDir ? `${safeFileName}.zip` : safeFileName;
-        
-        return `
-        <li class="file-item${isDir ? ' folder-item' : ''}">
-            <div class="file-info">
-                <div class="file-name-row">
-                    <div class="file-name" id="file-name-${f.id}">${safeFileName}</div>
-                    <div class="rename-input-container" id="rename-container-${f.id}">
-                        <input type="text" id="rename-input-${f.id}" value="${safeNameWithoutExt}">
-                        <span class="file-extension">${safeExtension}</span>
-                    </div>
-                    <div class="edit-buttons">
-                        <a href="javascript:void(0);" class="edit-btn" id="edit-btn-${f.id}" onclick="startRename('${f.id}')">重命名</a>
-                        <a href="javascript:void(0);" class="save-btn" id="save-btn-${f.id}" onclick="saveRename('${f.id}')">保存</a>
-                        <a href="javascript:void(0);" class="cancel-btn" id="cancel-btn-${f.id}" onclick="cancelRename('${f.id}')">取消</a>
-                    </div>
-                </div>
-                <div class="file-meta">
-                    <span class="file-kind">${kindText}</span>
-                    <span class="file-size">${formatFileSize(f.file_size)}</span>
-                    <span class="file-time">更新时间：${new Date(f.update_time).toLocaleString()}</span>
-                </div>
-            </div>
-            <div class="file-actions">
-                <a href="/api/download/${f.id}" class="download-btn" download="${downloadName}">下载</a>
-                <a href="javascript:void(0);" class="delete-btn" onclick="deleteFile('${f.id}', ${isDir})">删除</a>
-            </div>
-        </li>
-    `;
-    }).join('');
+    document.getElementById('file-list').addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter') return;
+        const input = event.target.closest('.rename-input-container input');
+        if (input) input.closest('.file-item').querySelector('.save-btn').click();
+    });
 }
 
-// 搜索文件
 function searchFiles() {
     const searchTerm = document.getElementById('search-input').value.toLowerCase().trim();
     if (!searchTerm) {
-        renderFiles(allFiles);
+        renderFiles(allFiles, '目录还是空的，从左侧上传第一个文件吧');
         return;
     }
-    const filteredFiles = allFiles.filter(file => 
-        file.file_name.toLowerCase().includes(searchTerm)
+
+    const filteredFiles = allFiles.filter((file) =>
+        String(file.file_name).toLowerCase().includes(searchTerm)
     );
     renderFiles(filteredFiles);
 }
 
-// 重置搜索
 function resetSearch() {
-    document.getElementById('search-input').value = '';
-    renderFiles(allFiles);
+    const input = document.getElementById('search-input');
+    input.value = '';
+    renderFiles(allFiles, '目录还是空的，从左侧上传第一个文件吧');
+    input.focus();
 }
 
-// 初始化搜索事件监听器
 function initSearch() {
+    const input = document.getElementById('search-input');
     document.getElementById('search-btn').addEventListener('click', searchFiles);
     document.getElementById('reset-btn').addEventListener('click', resetSearch);
-    // 支持回车键搜索
-    document.getElementById('search-input').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            searchFiles();
-        }
+    input.addEventListener('input', searchFiles);
+    input.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') resetSearch();
     });
 }
 
-// 显示所选文件
 function showSelectedFiles() {
-    const selectedFilesContainer = document.getElementById('selected-files');
-    
+    const container = document.getElementById('selected-files');
     if (selectedFilesList.length === 0) {
-        selectedFilesContainer.innerHTML = '<div class="selected-files-empty">未选择文件</div>';
+        container.innerHTML = '<div class="selected-files-empty">尚未选择文件</div>';
         return;
     }
-    
-    const formatFileSize = (bytes) => {
-        if (bytes < 1024) {
-            return bytes + ' B';
-        } else if (bytes < 1024 * 1024) {
-            return (bytes / 1024).toFixed(2) + ' KB';
-        } else if (bytes < 1024 * 1024 * 1024) {
-            return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-        }
-        return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
-    };
-    
-    let html = '<h3>所选文件 (' + selectedFilesList.length + ')</h3><ul>';
-    for (let i = 0; i < selectedFilesList.length; i++) {
-        const file = selectedFilesList[i];
+
+    const totalSize = selectedFilesList.reduce((sum, file) => sum + file.size, 0);
+    const items = selectedFilesList.map((file, index) => `
+        <li class="selected-file-item">
+            <span class="selected-file-name" title="${escapeHTML(getUploadPath(file))}">${escapeHTML(getUploadPath(file))}</span>
+            <span class="selected-file-size">${formatFileSize(file.size)}</span>
+            <button type="button" class="remove-file-btn" data-index="${index}" aria-label="移除 ${escapeHTML(file.name)}">移除</button>
+        </li>
+    `).join('');
+
+    container.innerHTML = `<h3>已选择 ${selectedFilesList.length} 项 · ${formatFileSize(totalSize)}</h3><ul>${items}</ul>`;
+}
+
+function addFiles(files) {
+    Array.from(files).forEach((file) => {
         const uploadPath = getUploadPath(file);
-        html += `
-            <li class="selected-file-item">
-                <span class="selected-file-name">${escapeHTML(uploadPath)}</span>
-                <span class="selected-file-size">${formatFileSize(file.size)}</span>
-                <button type="button" class="remove-file-btn" onclick="removeFile(${i})">移除</button>
-            </li>
-        `;
-    }
-    html += '</ul>';
-    selectedFilesContainer.innerHTML = html;
-}
+        const isDuplicate = selectedFilesList.some((existingFile) =>
+            getUploadPath(existingFile) === uploadPath && existingFile.size === file.size
+        );
+        if (!isDuplicate) selectedFilesList.push(file);
+    });
 
-// 移除单个文件
-function removeFile(index) {
-    selectedFilesList.splice(index, 1);
     showSelectedFiles();
+    if (selectedFilesList.length > 0) {
+        setUploadStatus(`已准备 ${selectedFilesList.length} 个项目`, 'idle');
+    }
 }
 
-// 初始化文件选择事件
 function initFileInput() {
     const picker = document.getElementById('file-picker');
     const trigger = document.getElementById('file-picker-trigger');
+    const menu = document.getElementById('file-picker-menu');
+    const menuButtons = Array.from(menu.querySelectorAll('button'));
     const selectFilesBtn = document.getElementById('select-files-btn');
     const selectFolderBtn = document.getElementById('select-folder-btn');
     const fileInput = document.getElementById('file-input');
     const folderInput = document.getElementById('folder-input');
+    const dropZone = document.getElementById('drop-zone');
 
     const closePicker = () => {
         picker.classList.remove('is-open');
@@ -331,23 +362,12 @@ function initFileInput() {
     const togglePicker = () => {
         const isOpen = picker.classList.toggle('is-open');
         trigger.setAttribute('aria-expanded', String(isOpen));
+        if (isOpen) menuButtons[0].focus();
     };
 
     const addFilesFromInput = (input) => {
-        const files = input.files;
-        for (let i = 0; i < files.length; i++) {
-            const uploadPath = getUploadPath(files[i]);
-            // 检查文件是否已经存在
-            const isDuplicate = selectedFilesList.some(existingFile => 
-                getUploadPath(existingFile) === uploadPath && existingFile.size === files[i].size
-            );
-            if (!isDuplicate) {
-                selectedFilesList.push(files[i]);
-            }
-        }
-        // 重置文件输入，以便可以再次选择相同的文件
+        addFiles(input.files);
         input.value = '';
-        showSelectedFiles();
     };
 
     trigger.addEventListener('click', togglePicker);
@@ -360,34 +380,97 @@ function initFileInput() {
         folderInput.click();
     });
     document.addEventListener('click', (event) => {
-        if (!picker.contains(event.target)) {
-            closePicker();
-        }
+        if (!picker.contains(event.target)) closePicker();
     });
     document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
             closePicker();
+            dropZone.classList.remove('is-dragging');
         }
+    });
+    menu.addEventListener('keydown', (event) => {
+        if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return;
+        event.preventDefault();
+        const currentIndex = menuButtons.indexOf(document.activeElement);
+        const direction = event.key === 'ArrowDown' ? 1 : -1;
+        menuButtons[(currentIndex + direction + menuButtons.length) % menuButtons.length].focus();
     });
     fileInput.addEventListener('change', () => addFilesFromInput(fileInput));
     folderInput.addEventListener('change', () => addFilesFromInput(folderInput));
-}
 
-// 初始化清空按钮
-function initClearButton() {
-    document.getElementById('clear-btn').addEventListener('click', () => {
-        document.getElementById('file-input').value = '';
-        document.getElementById('folder-input').value = '';
-        document.getElementById('upload-status').textContent = '';
-        selectedFilesList = [];
+    ['dragenter', 'dragover'].forEach((eventName) => {
+        dropZone.addEventListener(eventName, (event) => {
+            event.preventDefault();
+            dropZone.classList.add('is-dragging');
+        });
+    });
+    ['dragleave', 'drop'].forEach((eventName) => {
+        dropZone.addEventListener(eventName, (event) => {
+            event.preventDefault();
+            dropZone.classList.remove('is-dragging');
+        });
+    });
+    dropZone.addEventListener('drop', (event) => addFiles(event.dataTransfer.files));
+
+    document.getElementById('selected-files').addEventListener('click', (event) => {
+        const button = event.target.closest('.remove-file-btn');
+        if (!button) return;
+        selectedFilesList.splice(Number(button.dataset.index), 1);
         showSelectedFiles();
+        setUploadStatus(selectedFilesList.length ? `已准备 ${selectedFilesList.length} 个项目` : '等待选择文件');
     });
 }
 
-// 初始化
+function initUpload() {
+    const form = document.getElementById('upload-form');
+    const uploadButton = form.querySelector('.upload-btn');
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (selectedFilesList.length === 0) {
+            setUploadStatus('请先选择要上传的内容', 'error');
+            return;
+        }
+
+        const formData = new FormData();
+        selectedFilesList.forEach((file) => {
+            formData.append('files', file);
+            formData.append('paths', getUploadPath(file));
+        });
+
+        uploadButton.disabled = true;
+        setUploadStatus(`正在上传 ${selectedFilesList.length} 个项目…`, 'uploading');
+        try {
+            const response = await fetch('/api/upload', { method: 'POST', body: formData });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.error || '未知错误');
+
+            selectedFilesList = [];
+            showSelectedFiles();
+            setUploadStatus('上传完成，文件目录已更新', 'success');
+            notify('上传成功');
+            await loadFiles();
+        } catch (error) {
+            setUploadStatus(`上传失败：${error.message}`, 'error');
+            notify('上传没有完成，请重试', 'error');
+        } finally {
+            uploadButton.disabled = false;
+        }
+    });
+
+    document.getElementById('clear-btn').addEventListener('click', () => {
+        document.getElementById('file-input').value = '';
+        document.getElementById('folder-input').value = '';
+        selectedFilesList = [];
+        showSelectedFiles();
+        setUploadStatus('等待选择文件');
+    });
+}
+
+document.getElementById('current-year').textContent = String(new Date().getFullYear());
 loadFiles();
 initSearch();
-initClearButton();
+initFileActions();
 initFileInput();
-// 初始化所选文件列表
+initUpload();
 showSelectedFiles();

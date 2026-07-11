@@ -3,73 +3,153 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>网盘管理</title>
+    <meta name="theme-color" content="#f3f0e8">
+    <title>文件工作台 · 个人网盘</title>
+    <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/admin.css">
 </head>
 <body>
-    <div class="container">
-        <header class="page-header">
-            <div class="brand">
-                <span class="brand-mark" aria-hidden="true"></span>
-                <div>
-                    <p class="brand-label">Personal Disk</p>
-                    <h1>管理面板</h1>
-                </div>
-            </div>
+    <div class="site-shell">
+        <header class="masthead">
+            <a href="/admin" class="brand" aria-label="个人网盘管理首页">
+                <span class="brand-mark" aria-hidden="true">
+                    <svg viewBox="0 0 32 32" focusable="false">
+                        <path d="M5 8.5h8l2.2 3H27v12H5z"></path>
+                        <path d="M5 11.5h22"></path>
+                    </svg>
+                </span>
+                <span class="brand-copy">
+                    <strong>个人网盘</strong>
+                    <small>ADMIN CONSOLE</small>
+                </span>
+            </a>
             <nav class="header-actions" aria-label="页面导航">
-                <a href="/" class="nav-link">公开页</a>
-                <a href="/logout" class="nav-link nav-link-muted">退出</a>
+                <a href="/" class="nav-link">
+                    <svg viewBox="0 0 18 18" aria-hidden="true"><path d="M3 9h12M9 3c2.2 1.6 3.3 3.6 3.3 6S11.2 13.4 9 15M9 3C6.8 4.6 5.7 6.6 5.7 9s1.1 4.4 3.3 6"></path><circle cx="9" cy="9" r="6"></circle></svg>
+                    公开页
+                </a>
+                <a href="/logout" class="nav-link nav-link-muted">退出登录</a>
             </nav>
         </header>
-        
-        <section class="upload-section">
-            <div class="section-heading">
-                <h2>上传</h2>
-            </div>
-            <form id="upload-form" class="upload-form">
-                <div class="file-input">
-                    <div class="file-picker" id="file-picker">
-                        <button type="button" class="file-picker-trigger" id="file-picker-trigger" aria-haspopup="menu" aria-expanded="false">
-                            选择文件或文件夹
-                        </button>
-                        <div class="file-picker-menu" id="file-picker-menu" role="menu">
-                            <button type="button" id="select-files-btn" role="menuitem">选择文件</button>
-                            <button type="button" id="select-folder-btn" role="menuitem">选择文件夹</button>
-                        </div>
-                        <input type="file" id="file-input" name="files" class="file-picker-input" multiple>
-                        <input type="file" id="folder-input" class="file-picker-input" webkitdirectory directory multiple>
+
+        <main>
+            <section class="dashboard-intro" aria-labelledby="page-title">
+                <div>
+                    <p class="eyebrow">WORKSPACE / ADMIN</p>
+                    <h1 id="page-title">文件工作台</h1>
+                    <p class="intro-copy">上传新内容，整理现有文件，让公开分享始终保持清晰。</p>
+                </div>
+                <dl class="dashboard-stats" aria-label="文件统计">
+                    <div>
+                        <dt>项目总数</dt>
+                        <dd id="file-total">—</dd>
                     </div>
-                </div>
-                <div id="selected-files" class="selected-files">
-                    <!-- 所选文件列表将由JavaScript动态生成 -->
-                </div>
-                <div class="button-group">
-                    <button type="submit" class="upload-btn">上传</button>
-                    <button type="button" class="clear-btn" id="clear-btn">清空</button>
-                </div>
-                <div id="upload-status" class="status-message"></div>
-            </form>
-        </section>
-        
-        <section class="file-list-section">
-            <div class="section-heading">
-                <h2>文件列表</h2>
+                    <div>
+                        <dt>已用空间</dt>
+                        <dd id="storage-total">—</dd>
+                    </div>
+                    <div>
+                        <dt>服务状态</dt>
+                        <dd class="service-state"><i aria-hidden="true"></i>正常</dd>
+                    </div>
+                </dl>
+            </section>
+
+            <div class="workspace-grid">
+                <section class="upload-section" aria-labelledby="upload-title">
+                    <div class="section-heading">
+                        <div>
+                            <p class="section-index">01 / INGEST</p>
+                            <h2 id="upload-title">添加文件</h2>
+                        </div>
+                        <span class="section-note">支持多选与文件夹</span>
+                    </div>
+                    <form id="upload-form" class="upload-form">
+                        <div class="file-input" id="drop-zone">
+                            <div class="upload-illustration" aria-hidden="true">
+                                <svg viewBox="0 0 52 52"><path d="M8 15h14l4 5h18v23H8z"></path><path d="M8 20h36"></path><path d="M26 36V25m-5 5 5-5 5 5"></path></svg>
+                            </div>
+                            <div class="drop-copy">
+                                <strong>拖放到这里</strong>
+                                <span>或从设备中选择要上传的内容</span>
+                            </div>
+                            <div class="file-picker" id="file-picker">
+                                <button type="button" class="file-picker-trigger" id="file-picker-trigger" aria-haspopup="menu" aria-expanded="false">
+                                    选择内容
+                                    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 6 4 4 4-4"></path></svg>
+                                </button>
+                                <div class="file-picker-menu" id="file-picker-menu" role="menu">
+                                    <button type="button" id="select-files-btn" role="menuitem">
+                                        <span>选择文件</span><small>可同时选择多个</small>
+                                    </button>
+                                    <button type="button" id="select-folder-btn" role="menuitem">
+                                        <span>选择文件夹</span><small>保留目录结构</small>
+                                    </button>
+                                </div>
+                                <input type="file" id="file-input" name="files" class="file-picker-input" multiple>
+                                <input type="file" id="folder-input" class="file-picker-input" webkitdirectory directory multiple>
+                            </div>
+                        </div>
+                        <div id="selected-files" class="selected-files" aria-live="polite">
+                            <div class="selected-files-empty">尚未选择文件</div>
+                        </div>
+                        <div class="button-group">
+                            <button type="submit" class="upload-btn">
+                                开始上传
+                                <svg viewBox="0 0 18 18" aria-hidden="true"><path d="M3 9h11M10 5l4 4-4 4"></path></svg>
+                            </button>
+                            <button type="button" class="clear-btn" id="clear-btn">清空列表</button>
+                        </div>
+                        <div id="upload-status" class="status-message" aria-live="polite">等待选择文件</div>
+                    </form>
+                </section>
+
+                <section class="file-list-section" aria-labelledby="files-title">
+                    <div class="section-heading">
+                        <div>
+                            <p class="section-index">02 / ARCHIVE</p>
+                            <h2 id="files-title">文件目录</h2>
+                        </div>
+                        <p class="result-count"><span id="result-count">—</span> 个结果</p>
+                    </div>
+                    <div class="search-container" role="search">
+                        <label class="sr-only" for="search-input">搜索文件名</label>
+                        <div class="search-field">
+                            <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"></circle><path d="m13 13 4 4"></path></svg>
+                            <input type="search" id="search-input" placeholder="搜索文件或文件夹…" class="search-input" autocomplete="off">
+                        </div>
+                        <button id="search-btn" class="search-btn" type="button">搜索</button>
+                        <button id="reset-btn" class="reset-btn" type="button">清除</button>
+                    </div>
+                    <ul id="file-list" class="file-list" aria-live="polite" aria-busy="true">
+                        <li class="empty-message loading-message"><span class="loading-dot" aria-hidden="true"></span>正在整理文件…</li>
+                    </ul>
+                </section>
             </div>
-            <div class="search-container">
-                <input type="text" id="search-input" placeholder="搜索文件名..." class="search-input">
-                <button id="search-btn" class="search-btn">搜索</button>
-                <button id="reset-btn" class="reset-btn">重置</button>
-            </div>
-            <ul id="file-list" class="file-list">
-                <!-- 文件项将由JavaScript动态生成 -->
-            </ul>
-        </section>
-        
+        </main>
+
         <footer>
-            <p>© 个人网盘</p>
+            <p>PERSONAL DISK <span>·</span> ADMIN WORKSPACE</p>
+            <p>© <span id="current-year">2026</span> 个人网盘</p>
         </footer>
     </div>
-    
+
+    <dialog class="confirm-dialog" id="confirm-dialog" aria-labelledby="confirm-title" aria-describedby="confirm-message">
+        <form method="dialog">
+            <span class="dialog-index">CONFIRM / ACTION</span>
+            <div class="dialog-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M5 7h14M9 7V4h6v3m-8 0 1 13h8l1-13M10 11v5m4-5v5"></path></svg>
+            </div>
+            <h2 id="confirm-title">确认删除？</h2>
+            <p id="confirm-message">删除后将无法恢复。</p>
+            <div class="dialog-actions">
+                <button value="cancel" class="dialog-cancel">取消</button>
+                <button value="confirm" class="dialog-confirm">确认删除</button>
+            </div>
+        </form>
+    </dialog>
+    <div class="toast-region" id="toast-region" aria-live="polite" aria-atomic="true"></div>
+
     <script src="/static/js/admin.js"></script>
 </body>
 </html>

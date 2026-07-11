@@ -3,43 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>个人网盘</title>
+    <meta name="theme-color" content="#f3f0e8">
+    <title>个人网盘 · 公开文件</title>
+    <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/visitor.css">
 </head>
 <body>
-    <div class="container">
-        <header class="page-header">
-            <div class="brand">
-                <span class="brand-mark" aria-hidden="true"></span>
-                <div>
-                    <p class="brand-label">Personal Disk</p>
-                    <h1>个人网盘</h1>
-                </div>
-            </div>
+    <div class="site-shell">
+        <header class="masthead">
+            <a href="/" class="brand" aria-label="个人网盘首页">
+                <span class="brand-mark" aria-hidden="true">
+                    <svg viewBox="0 0 32 32" focusable="false">
+                        <path d="M5 8.5h8l2.2 3H27v12H5z"></path>
+                        <path d="M5 11.5h22"></path>
+                    </svg>
+                </span>
+                <span class="brand-copy">
+                    <strong>个人网盘</strong>
+                    <small>MY ARCHIVE</small>
+                </span>
+            </a>
             <nav class="header-actions" aria-label="页面导航">
-                <a href="/login" class="nav-link">管理</a>
+                <span class="online-status"><i aria-hidden="true"></i>公开访问中</span>
+                <a href="/login" class="nav-link">
+                    管理入口
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8h9M9 4l4 4-4 4"></path></svg>
+                </a>
             </nav>
         </header>
-        
-        <section class="file-list-section">
-            <div class="section-heading">
-                <h2>文件</h2>
-            </div>
-            <div class="search-container">
-                <input type="text" id="search-input" placeholder="搜索文件名..." class="search-input">
-                <button id="search-btn" class="search-btn">搜索</button>
-                <button id="reset-btn" class="reset-btn">重置</button>
-            </div>
-            <ul id="file-list" class="file-list">
-                <!-- 文件项将由JavaScript动态生成 -->
-            </ul>
-        </section>
-        
+
+        <main>
+            <section class="shared-hero" aria-labelledby="page-title">
+                <div class="hero-copy">
+                    <p class="eyebrow"><span>SHARED ARCHIVE</span><span>公开文件区</span></p>
+                    <h1 id="page-title">把重要的文件，<br>放在刚好的地方。</h1>
+                    <p class="hero-description">一个安静、直接的文件中转站。找到需要的内容，然后带走它。</p>
+                </div>
+                <aside class="archive-summary" aria-label="公开文件概览">
+                    <div class="summary-index">/ 01</div>
+                    <div class="summary-main">
+                        <strong id="archive-count">—</strong>
+                        <span>个公开项目</span>
+                    </div>
+                    <p>无需登录即可下载<br>文件会保持原始格式</p>
+                    <span class="summary-stamp">OPEN ACCESS</span>
+                </aside>
+            </section>
+
+            <section class="file-list-section" aria-labelledby="files-title">
+                <div class="section-heading">
+                    <div>
+                        <p class="section-index">02 / BROWSE</p>
+                        <h2 id="files-title">公开文件</h2>
+                    </div>
+                    <p class="result-count"><span id="result-count">—</span> 个结果</p>
+                </div>
+
+                <div class="search-container" role="search">
+                    <label class="sr-only" for="search-input">搜索文件名</label>
+                    <div class="search-field">
+                        <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"></circle><path d="m13 13 4 4"></path></svg>
+                        <input type="search" id="search-input" placeholder="输入文件名，快速定位…" class="search-input" autocomplete="off">
+                    </div>
+                    <button id="search-btn" class="search-btn" type="button">搜索</button>
+                    <button id="reset-btn" class="reset-btn" type="button">清除</button>
+                </div>
+
+                <ul id="file-list" class="file-list" aria-live="polite" aria-busy="true">
+                    <li class="empty-message loading-message"><span class="loading-dot" aria-hidden="true"></span>正在整理文件…</li>
+                </ul>
+            </section>
+        </main>
+
         <footer>
-            <p>© 个人网盘</p>
+            <p>PERSONAL DISK <span>·</span> A QUIET PLACE FOR FILES</p>
+            <p>© <span id="current-year">2026</span> 个人网盘</p>
         </footer>
     </div>
-    
+
     <script src="/static/js/visitor.js"></script>
 </body>
 </html>

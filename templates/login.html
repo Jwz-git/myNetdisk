@@ -3,29 +3,86 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>管理员登录</title>
+    <meta name="theme-color" content="#202a44">
+    <title>登录 · 个人网盘</title>
+    <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/login.css">
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-brand">
-            <span class="brand-mark" aria-hidden="true"></span>
-            <p>Personal Disk</p>
-        </div>
-        <form class="login-form" id="login-form">
-            <h2>管理员登录</h2>
-            <div class="form-group">
-                <label for="username">用户名</label>
-                <input type="text" id="username" name="username" required>
+    <main class="login-shell">
+        <section class="login-aside" aria-label="个人网盘介绍">
+            <a href="/" class="brand brand-light" aria-label="返回个人网盘首页">
+                <span class="brand-mark" aria-hidden="true">
+                    <svg viewBox="0 0 32 32" focusable="false">
+                        <path d="M5 8.5h8l2.2 3H27v12H5z"></path>
+                        <path d="M5 11.5h22"></path>
+                    </svg>
+                </span>
+                <span class="brand-copy">
+                    <strong>个人网盘</strong>
+                    <small>MY ARCHIVE</small>
+                </span>
+            </a>
+
+            <div class="aside-copy">
+                <p class="eyebrow">PRIVATE CONSOLE / 2026</p>
+                <h1>收纳、整理、<br>随时取用。</h1>
+                <p>你的文件工作台。保持简单，也保持井然有序。</p>
             </div>
-            <div class="form-group">
-                <label for="password">密码</label>
-                <input type="password" id="password" name="password" required>
+
+            <div class="file-cards" aria-hidden="true">
+                <div class="file-card file-card-back"><span>ARCHIVE</span><b>03</b></div>
+                <div class="file-card file-card-mid"><span>PRIVATE</span><b>02</b></div>
+                <div class="file-card file-card-front">
+                    <span>PERSONAL DISK</span>
+                    <svg viewBox="0 0 48 48"><path d="M7 13h13l4 5h17v20H7z"></path><path d="M7 18h34"></path></svg>
+                    <b>01</b>
+                </div>
             </div>
-            <button type="submit" class="login-btn">登录</button>
-            <div id="login-error" class="error-message"></div>
-        </form>
-    </div>
+
+            <p class="aside-footnote">SECURE ACCESS <span>●</span> ADMIN ONLY</p>
+        </section>
+
+        <section class="login-panel">
+            <div class="panel-inner">
+                <a href="/" class="back-link">
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13 8H4M7 4 3 8l4 4"></path></svg>
+                    返回公开页
+                </a>
+
+                <form class="login-form" id="login-form">
+                    <div class="form-heading">
+                        <p class="eyebrow">ADMIN SIGN IN</p>
+                        <h2>欢迎回来</h2>
+                        <p>登录后即可上传、重命名和管理文件。</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="username">用户名</label>
+                        <div class="input-wrap">
+                            <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="7" r="3.25"></circle><path d="M4.5 17c.5-3.2 2.3-5 5.5-5s5 1.8 5.5 5"></path></svg>
+                            <input type="text" id="username" name="username" placeholder="输入管理员账号" autocomplete="username" required autofocus>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">密码</label>
+                        <div class="input-wrap">
+                            <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="8" width="12" height="9" rx="2"></rect><path d="M7 8V6a3 3 0 0 1 6 0v2"></path></svg>
+                            <input type="password" id="password" name="password" placeholder="输入登录密码" autocomplete="current-password" required>
+                            <button type="button" class="password-toggle" id="password-toggle" aria-label="显示密码" aria-pressed="false">显示</button>
+                        </div>
+                    </div>
+                    <button type="submit" class="login-btn">
+                        进入工作台
+                        <svg viewBox="0 0 18 18" aria-hidden="true"><path d="M3 9h11M10 5l4 4-4 4"></path></svg>
+                    </button>
+                    <div id="login-error" class="error-message" role="alert" aria-live="polite"></div>
+                </form>
+
+                <p class="login-footnote">仅限管理员访问 · 登录状态会被安全保存</p>
+            </div>
+        </section>
+    </main>
     <script src="/static/js/login.js"></script>
 </body>
 </html>
