@@ -62,3 +62,23 @@ func TestValidateConfigRejectsUnknownDatabase(t *testing.T) {
 		t.Fatal("validateConfig accepted unsupported database")
 	}
 }
+
+func TestIsAllowedFileType(t *testing.T) {
+	cfg := &Config{Upload: UploadConfig{AllowedTypes: []string{"pdf", "MP4", "xlsx"}}}
+
+	for _, fileType := range []string{"pdf", "PDF", "mp4", "XLSX"} {
+		if !cfg.IsAllowedFileType(fileType) {
+			t.Errorf("IsAllowedFileType(%q) = false, want true", fileType)
+		}
+	}
+	if cfg.IsAllowedFileType("exe") {
+		t.Error("IsAllowedFileType(\"exe\") = true, want false")
+	}
+}
+
+func TestIsAllowedFileTypeAllowsAllWhenListIsEmpty(t *testing.T) {
+	cfg := &Config{}
+	if !cfg.IsAllowedFileType("any-extension") {
+		t.Error("empty allowedTypes should allow every extension")
+	}
+}
