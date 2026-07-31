@@ -1,0 +1,83 @@
+# Personal Disk 项目配置文件
+# 配置所有需要的设置项，避免硬编码
+
+# 数据库配置
+database:
+  driver: "sqlite"       # sqlite 或 mysql
+  path: "data/personal_disk.db"
+  host: "127.0.0.1"
+  port: "3306"
+  user: "root"
+  password: ""
+  name: "personal_disk"
+  charset: "utf8mb4"
+  parseTime: true
+  location: "Local"
+
+# 服务器配置
+server:
+  port: "8080"
+  host: "0.0.0.0"  # 绑定地址，0.0.0.0 表示监听所有接口
+
+# 管理员账号配置
+admin:
+  username: "admin"
+  password: "123456"  # 建议使用更强的密码
+
+# 文件上传配置
+upload:
+  directory: "storage"  # 上传文件存储目录
+  maxSize: 536870912    # 最大上传大小 (512MB，单位：字节)
+  allowedTypes:         # 允许的文件类型 (可选，为空则允许所有类型)
+    - "jpg"
+    - "jpeg"
+    - "png"
+    - "gif"
+    - "pdf"
+    - "doc"
+    - "docx"
+    - "txt"
+    - "zip"
+    - "rar"
+
+# 会话配置
+session:
+  cookieName: "admin_session"
+  cookieValue: "admin_logged_in"
+  cookiePath: "/"
+  maxAge: 86400  # 会话过期时间 (24小时，单位：秒)
+
+# 静态文件配置
+static:
+  directory: "web/static"    # 静态文件目录
+  urlPrefix: "/static/"  # 静态文件 URL 前缀
+
+# 模板文件配置
+templates:
+  directory: "web/templates" # 模板文件目录
+
+# 日志配置
+logging:
+  level: "info"          # 日志级别: debug, info, warn, error
+  file: "app.log"        # 日志文件路径，空字符串表示输出到控制台
+  maxSize: 100           # 日志文件最大大小 (MB)
+  maxBackups: 3          # 保留旧日志文件数量
+  maxAge: 28             # 日志文件保留天数
+
+# 安全配置
+security:
+  enableCORS: true       # 是否启用 CORS
+  allowedOrigins:        # 允许的跨域来源
+    - "http://localhost:3000"
+    - "http://127.0.0.1:3000"
+  enableRateLimit: false # 是否启用速率限制
+  rateLimit:
+    requests: 100        # 每分钟最大请求数
+    window: 60           # 时间窗口 (秒)
+
+# 应用信息
+app:
+  name: "Personal Disk"
+  version: "1.0.0"
+  description: "个人网盘系统"
+  author: "Your Name"

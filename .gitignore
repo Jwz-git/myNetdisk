@@ -23,6 +23,13 @@ dist-ssr
 *.test
 *.out
 
+# Test outputs (test source files remain versioned)
+coverage/
+coverage.*
+*.coverprofile
+test-results/
+junit*.xml
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -36,9 +43,13 @@ dist-ssr
 
 # Project specific
 plan.md
+storage/
+storage_test/
+# 兼容旧版本，避免遗留上传内容被误提交
 uploads/
 uploads_test/
 mysql-data/
+data/
 
 # Environment variables
 .env
@@ -50,4 +61,3 @@ mysql-data/
 # Docker
 *.tar
 docker-compose.override.yml
-

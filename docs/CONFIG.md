@@ -4,7 +4,7 @@
 
 Personal Disk 项目采用了分层配置管理系统，支持多环境部署和配置解耦。配置系统具有以下特性：
 
-- 🎯 **统一配置管理**: 所有配置项集中在 `config/` 目录
+- 🎯 **统一配置管理**: YAML 配置集中在 `configs/`，加载代码位于 `internal/config/`
 - 🌍 **多环境支持**: 开发、测试、生产环境独立配置
 - 🔒 **环境变量覆盖**: 敏感信息可通过环境变量安全设置
 - ✅ **配置验证**: 自动验证配置项的有效性
@@ -13,9 +13,11 @@ Personal Disk 项目采用了分层配置管理系统，支持多环境部署和
 ## 目录结构
 
 ```
-config/
-├── config.go           # 配置结构体定义和加载逻辑
-├── init.go            # 配置初始化工具
+internal/config/
+├── config.go          # 配置结构体定义和加载逻辑
+└── init.go            # 配置初始化工具
+
+configs/
 ├── default.yml        # 默认配置文件
 ├── development.yml    # 开发环境配置
 ├── test.yml          # 测试环境配置
@@ -27,8 +29,8 @@ config/
 ### 环境配置优先级
 
 1. **环境变量** (最高优先级)
-2. **环境配置文件** (`config/{environment}.yml`)
-3. **默认配置文件** (`config/default.yml`)
+2. **环境配置文件** (`configs/{environment}.yml`)
+3. **默认配置文件** (`configs/default.yml`)
 4. **兼容配置文件** (`config.yml` - 向后兼容，不推荐)
 
 ### 环境切换
@@ -52,6 +54,8 @@ export APP_ENV=production
 
 | 配置项 | 说明 | 默认值 | 环境变量覆盖 |
 |--------|------|--------|--------------|
+| `driver` | 数据库类型：`sqlite` 或 `mysql` | `sqlite` | `DB_DRIVER` |
+| `path` | SQLite 数据库文件路径 | `data/personal_disk.db` | `DB_PATH` |
 | `host` | 数据库主机地址 | `127.0.0.1` | `DB_HOST` |
 | `port` | 数据库端口 | `3306` | `DB_PORT` |
 | `user` | 数据库用户名 | `root` | `DB_USER` |
@@ -81,7 +85,7 @@ export APP_ENV=production
 
 | 配置项 | 说明 | 默认值 | 环境变量覆盖 |
 |--------|------|--------|--------------|
-| `directory` | 上传目录 | `uploads` | `UPLOAD_DIRECTORY` |
+| `directory` | 上传目录 | `storage` | `UPLOAD_DIRECTORY` |
 | `maxSize` | 最大文件大小(字节) | `536870912` (512MB) | `UPLOAD_MAX_SIZE` |
 | `allowedTypes` | 允许的文件类型 | 见配置文件 | - |
 
@@ -120,7 +124,7 @@ export APP_ENV=production
 package main
 
 import (
-    "personal-disk/config"
+    "personal-disk/internal/config"
 )
 
 func main() {
@@ -146,35 +150,35 @@ cp env.example .env
 vim .env
 
 # 3. 启动应用 (会自动加载开发环境配置)
-go run main.go
+go run ./cmd/netdisk
 
 # 或使用启动脚本
 ./scripts/start.sh dev
 ```
 
-### 3. Docker 部署
+### 3. 启动脚本
 
 ```bash
-# 开发环境
+# 本地开发环境
 ./scripts/start.sh dev
 
-# 测试环境  
+# 本地测试环境
 ./scripts/start.sh test
 
-# 生产环境 (需要设置环境变量)
+# 本地生产环境（需要设置环境变量）
 export ADMIN_PASSWORD="your_secure_password"
-export DB_PASSWORD="your_db_password"
 ./scripts/start.sh prod
 ```
 
 ### 4. 手动 Docker Compose
 
 ```bash
-# 开发/测试环境
-docker-compose up -d
+# 开发环境
+docker compose -f deploy/docker-compose.yml up -d --build
 
 # 生产环境
-docker-compose -f docker-compose.prod.yml up -d
+ADMIN_PASSWORD="your_secure_password" \
+docker compose -f deploy/docker-compose.prod.yml up -d --build
 ```
 
 ## 环境变量设置
@@ -185,8 +189,20 @@ docker-compose -f docker-compose.prod.yml up -d
 
 ```bash
 APP_ENV=development
+DB_DRIVER=sqlite
+DB_PATH=data/personal_disk.db
+ADMIN_PASSWORD=123456
+```
+
+改用 MySQL：
+
+```bash
+DB_DRIVER=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_USER=root
 DB_PASSWORD=dev_password
-ADMIN_PASSWORD=dev123456
+DB_NAME=personal_disk
 ```
 
 ### 生产环境
@@ -196,7 +212,6 @@ ADMIN_PASSWORD=dev123456
 export APP_ENV=production
 export ADMIN_USERNAME=admin
 export ADMIN_PASSWORD=your_secure_password_here
-export DB_PASSWORD=your_db_password_here
 
 # 可选的环境变量
 export SERVER_PORT=8080
@@ -209,15 +224,15 @@ export LOG_LEVEL=warn
 配置系统会自动验证以下项目：
 
 - ✅ 必填字段不能为空
-- ✅ 端口号格式正确 (1-65535)
-- ✅ 生产环境密码不能为空
-- ✅ 文件路径存在性检查
+- ✅ MySQL 模式下端口号格式正确 (1-65535)
+- ✅ SQLite 模式下数据库路径非空
+- ✅ 管理员账号和密码不能为空
 
 ## 最佳实践
 
 ### 🔒 安全实践
 
-1. **生产环境密码**: 永远不要在配置文件中硬编码生产环境密码
+1. **生产环境密码**: 永远不要在配置文件中硬编码管理员密码或 MySQL 密码
 2. **环境变量**: 敏感信息使用环境变量传递
 3. **权限控制**: 确保配置文件和日志目录有适当的权限
 
@@ -238,7 +253,7 @@ export LOG_LEVEL=warn
 ### 配置加载失败
 
 ```
-错误: 配置文件不存在: config/production.yml
+错误: 配置文件不存在: configs/production.yml
 ```
 
 **解决**: 确保对应环境的配置文件存在，或设置正确的 `APP_ENV`

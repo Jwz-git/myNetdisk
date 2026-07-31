@@ -1,5 +1,8 @@
 FROM golang:1.22-alpine AS builder
 
+ARG GOPROXY=https://proxy.golang.org,direct
+ENV GOPROXY=${GOPROXY}
+
 # 设置工作目录
 WORKDIR /app
 
@@ -13,7 +16,7 @@ COPY . .
 RUN go mod download
 
 # 构建应用
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main .
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/netdisk
 
 # 最终镜像
 FROM alpine:latest
@@ -31,15 +34,14 @@ WORKDIR /app
 COPY --from=builder /app/main .
 
 # 复制配置文件
-COPY --from=builder /app/config ./config
+COPY --from=builder /app/configs ./configs
 
 # 复制静态文件和模板
-COPY --from=builder /app/static ./static
-COPY --from=builder /app/templates ./templates
+COPY --from=builder /app/web ./web
 
-# 创建上传目录和日志目录
-RUN mkdir -p /app/uploads /app/logs && \
-    chown -R appuser:appgroup /app/uploads /app/logs
+# 创建运行时目录
+RUN mkdir -p /app/data /app/storage /app/logs && \
+    chown -R appuser:appgroup /app/data /app/storage /app/logs
 
 # 切换到应用用户
 USER appuser

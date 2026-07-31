@@ -12,7 +12,6 @@ make dev
 
 # 启动生产环境
 export ADMIN_PASSWORD="your_secure_password"
-export DB_PASSWORD="your_db_password"
 make prod
 ```
 
@@ -22,14 +21,22 @@ make prod
 # 启动开发环境
 ./scripts/start.sh dev
 
-# 启动生产环境并查看日志
-./scripts/start.sh prod --logs
+# 启动生产环境
+ADMIN_PASSWORD="your_secure_password" ./scripts/start.sh prod
 ```
 
 ## 📋 系统要求
 
-- **Docker**: 20.0+ 和 Docker Compose
-- **本地开发**: Go 1.22+ 和 MySQL 8.0+
+- **本地开发**: Go 1.22+；默认使用 SQLite，选择 MySQL 时需 MySQL 8.0+
+- **容器部署（可选）**: Docker 20.0+ 和 Docker Compose
+
+## 本地零配置启动
+
+```bash
+go run ./cmd/netdisk
+```
+
+默认数据写入 `data/personal_disk.db`。改用 MySQL 时设置 `DB_DRIVER=mysql` 及 `DB_HOST`、`DB_PORT`、`DB_USER`、`DB_PASSWORD`、`DB_NAME`。
 
 ## 🎯 访问地址
 
@@ -43,7 +50,7 @@ make prod
 
 | 环境 | 用户名 | 密码 |
 |------|--------|------|
-| 开发 | `admin` | `dev123456` |
+| 开发 | `admin` | `123456` |
 | 测试 | `test_admin` | `test123456` |
 | 生产 | `admin` | **通过环境变量设置** |
 
@@ -71,18 +78,6 @@ make stop
 make build
 ```
 
-### 数据库管理
-```bash
-# 备份数据库
-./scripts/db.sh backup --env dev
-
-# 查看数据库状态
-./scripts/db.sh status --env dev
-
-# 重置数据库
-./scripts/db.sh reset --env dev
-```
-
 ## 🐛 故障排除
 
 ### 端口被占用
@@ -95,13 +90,9 @@ kill $(lsof -ti :8080)
 ```
 
 ### 数据库连接失败
-```bash
-# 检查数据库容器
-docker logs personal_disk_db
 
-# 重启数据库
-docker restart personal_disk_db
-```
+- SQLite：检查 `data/` 目录是否可写。
+- MySQL：检查 `DB_HOST`、端口、账号密码和容器网络连通性。
 
 ### 清理 Docker 资源
 ```bash

@@ -1,0 +1,81 @@
+# Production 环境配置文件
+# 用于生产环境
+
+# 数据库配置
+database:
+  driver: "sqlite"
+  path: "data/personal_disk.db"
+  host: "127.0.0.1"     # 仅 MySQL 模式使用
+  port: "3306"
+  user: "root"
+  password: ""          # 仅 MySQL 模式使用，建议通过环境变量设置
+  name: "personal_disk"
+  charset: "utf8mb4"
+  parseTime: true
+  location: "Local"
+
+# 服务器配置
+server:
+  port: "8080"
+  host: "0.0.0.0"
+
+# 管理员账号配置
+admin:
+  username: "admin"
+  password: ""          # 生产环境密码必须通过环境变量设置
+
+# 文件上传配置
+upload:
+  directory: "storage"
+  maxSize: 536870912    # 生产环境 512MB
+  allowedTypes:
+    - "jpg"
+    - "jpeg"
+    - "png"
+    - "gif"
+    - "pdf"
+    - "doc"
+    - "docx"
+    - "txt"
+    - "zip"
+    - "rar"
+
+# 会话配置
+session:
+  cookieName: "admin_session"
+  cookieValue: "admin_logged_in"
+  cookiePath: "/"
+  maxAge: 86400         # 生产环境24小时过期
+
+# 静态文件配置
+static:
+  directory: "web/static"
+  urlPrefix: "/static/"
+
+# 模板文件配置
+templates:
+  directory: "web/templates"
+
+# 日志配置
+logging:
+  level: "warn"         # 生产环境只记录警告以上级别
+  file: "/app/logs/app.log"
+  maxSize: 200
+  maxBackups: 10
+  maxAge: 30
+
+# 安全配置
+security:
+  enableCORS: false     # 生产环境关闭CORS
+  allowedOrigins: []
+  enableRateLimit: true # 生产环境开启限流
+  rateLimit:
+    requests: 100
+    window: 60
+
+# 应用信息
+app:
+  name: "Personal Disk"
+  version: "1.0.0"
+  description: "个人网盘系统"
+  author: "Your Name"

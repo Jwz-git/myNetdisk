@@ -23,7 +23,6 @@ help:
 	@echo ""
 	@echo "维护相关:"
 	@echo "  clean     清理临时文件"
-	@echo "  backup    备份数据"
 
 # 开发环境
 dev:
@@ -33,7 +32,7 @@ dev:
 # 本地运行
 run:
 	@echo "启动应用..."
-	go run main.go
+	go run ./cmd/netdisk
 
 # 测试
 test:
@@ -67,10 +66,6 @@ prod:
 		echo "错误: 请设置 ADMIN_PASSWORD 环境变量"; \
 		exit 1; \
 	fi
-	@if [ -z "$$DB_PASSWORD" ]; then \
-		echo "错误: 请设置 DB_PASSWORD 环境变量"; \
-		exit 1; \
-	fi
 	./scripts/start.sh prod
 
 # 停止服务
@@ -97,21 +92,9 @@ logs:
 clean:
 	@echo "清理临时文件..."
 	go clean
-	docker system prune -f
-	rm -rf uploads_test logs_test
-
-# 备份数据
-backup:
-	@echo "备份数据..."
-	@mkdir -p backup/$(shell date +%Y%m%d)
-	@if docker ps | grep -q personal_disk_db; then \
-		docker exec personal_disk_db mysqldump -u root -p personal_disk > backup/$(shell date +%Y%m%d)/database.sql; \
-		echo "数据库备份完成: backup/$(shell date +%Y%m%d)/database.sql"; \
-	fi
-	@if [ -d "uploads" ]; then \
-		tar -czf backup/$(shell date +%Y%m%d)/uploads.tar.gz uploads/; \
-		echo "文件备份完成: backup/$(shell date +%Y%m%d)/uploads.tar.gz"; \
-	fi
+	@find . -type f ! -path './.git/*' \( -name '*.tmp' -o -name '*.temp' -o -name '*.test' -o -name '*.out' -o -name 'coverage.html' \) -delete
+	@find storage_test uploads_test logs_test -depth -type f -delete 2>/dev/null || true
+	@find storage_test uploads_test logs_test -depth -type d -empty -delete 2>/dev/null || true
 
 # 安装开发依赖
 install:

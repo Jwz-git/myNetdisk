@@ -33,8 +33,16 @@ logs_test/
 personal-disk
 test_config
 
-# 测试覆盖率
+# 测试源码和产物（运行镜像不需要）
+**/*_test.go
+**/testdata/
+*.test
 *.out
+coverage/
+coverage.*
+*.coverprofile
+test-results/
+junit*.xml
 coverage.html
 
 # 备份文件
@@ -50,6 +58,10 @@ backup/
 .env.production
 
 # 运行时目录
+data/
+storage/
+storage_test/
+# 兼容旧版本，避免把遗留上传内容加入构建上下文
 uploads/
 uploads_test/
 

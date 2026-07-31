@@ -1,331 +1,206 @@
-# Personal Disk 🗂️
+# Personal Disk
 
-> 一个简洁、高效的个人网盘系统，支持文件上传、下载、管理等功能
+基于 Go 的轻量级个人网盘，支持文件与文件夹上传、浏览、下载、重命名和删除。
 
-![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?style=flat-square&logo=go&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-Supported-2496ED?style=flat-square&logo=docker&logoColor=white)
-![MySQL](https://img.shields.io/badge/MySQL-8.0+-4479A1?style=flat-square&logo=mysql&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
+默认使用 SQLite，首次运行无需准备数据库；需要独立数据库服务时可以切换到 MySQL。
 
-## ✨ 特性
+## 主要功能
 
-- 🚀 **高性能**: 基于 Go 语言，支持高并发文件操作
-- 🔧 **易部署**: 支持 Docker 一键部署，多环境配置
-- 🔐 **安全可靠**: 管理员认证，文件类型限制，安全上传
-- 📱 **响应式**: 现代化 Web 界面，支持移动端访问
-- ⚡ **轻量级**: 最小化依赖，快速启动
-- 🌍 **多环境**: 开发、测试、生产环境独立配置
+- 上传单个或多个文件；文件夹会先在浏览器内压缩成 ZIP，再作为单个文件上传
+- 下载文件；下载文件夹时实时生成 ZIP
+- 管理员登录和带有效期的签名会话
+- 登录后执行上传、重命名和删除操作
+- 校验上传大小、文件类型和相对路径
+- 可配置 CORS 和基于客户端 IP 的请求限流
+- 支持 SQLite 与 MySQL
+- 支持本地运行和 Docker 部署
 
-## 🏗️ 系统架构
+> 当前文件列表和下载接口无需登录。如果网盘内容不能公开访问，应在部署前为这两个接口增加认证，或通过反向代理限制访问。
 
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Web Browser   │───▶│  Personal Disk  │───▶│   MySQL DB      │
-│                 │    │   (Go Server)   │    │                 │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                │
-                                ▼
-                        ┌─────────────────┐
-                        │  File Storage   │
-                        │   (uploads/)    │
-                        └─────────────────┘
-```
+## 快速开始
 
-## 🚀 快速开始
+### 本地运行
 
-### 方式一：Docker 部署（推荐）
-
-1. **克隆项目**
-   ```bash
-   git clone <repository-url>
-   cd personal-disk
-   ```
-
-2. **配置环境变量**
-   ```bash
-   cp env.example .env
-   # 编辑 .env 文件，设置数据库密码等
-   ```
-
-3. **启动服务**
-   ```bash
-   # 开发环境
-   ./scripts/start.sh dev
-   
-   # 或使用Makefile
-   make dev
-   
-   # 生产环境
-   export ADMIN_PASSWORD="your_secure_password"
-   export DB_PASSWORD="your_db_password"
-   ./scripts/start.sh prod
-   # 或
-   make prod
-   ```
-
-### 方式二：本地开发
-
-1. **环境要求**
-   - Go 1.20+
-   - MySQL 8.0+
-
-2. **安装依赖**
-   ```bash
-   go mod tidy
-   ```
-
-3. **配置数据库**
-   ```bash
-   # 创建数据库
-   mysql -u root -p -e "CREATE DATABASE personal_disk CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-   ```
-
-4. **启动应用**
-   ```bash
-   go run main.go
-   ```
-
-## 📖 使用说明
-
-### 访问地址
-
-- **主页**: http://localhost:8080/
-- **管理后台**: http://localhost:8080/admin
-- **登录页面**: http://localhost:8080/login
-
-### 默认账号
-
-| 环境 | 用户名 | 密码 | 说明 |
-|------|--------|------|------|
-| 开发环境 | `admin` | `dev123456` | 开发测试用 |
-| 测试环境 | `test_admin` | `test123456` | 测试用 |
-| 生产环境 | `admin` | **必须通过环境变量设置** | 安全要求 |
-
-### 主要功能
-
-#### 🔐 用户认证
-- 管理员登录/登出
-- 会话管理
-- 访问权限控制
-
-#### 📁 文件管理
-- **文件上传**: 支持多文件同时上传
-- **文件列表**: 查看所有已上传文件
-- **文件下载**: 安全的文件下载
-- **文件删除**: 删除不需要的文件
-- **文件重命名**: 在线重命名文件
-
-#### 🛡️ 安全特性
-- 文件类型限制
-- 文件大小限制
-- 上传路径安全检查
-- 管理员权限验证
-
-## ⚙️ 配置说明
-
-### 环境配置
-
-通过 `APP_ENV` 环境变量切换环境：
+要求 Go 1.22 或更高版本。
 
 ```bash
-# 开发环境 (默认)
-export APP_ENV=development  # 使用 config/development.yml
-
-# 测试环境
-export APP_ENV=test         # 使用 config/test.yml
-
-# 生产环境
-export APP_ENV=production   # 使用 config/production.yml
-```
-
-配置文件优先级：
-1. **环境特定配置** - `config/{environment}.yml`
-2. **默认配置** - `config/default.yml`
-3. **兼容配置** - `config.yml` (向后兼容，不推荐)
-
-### 重要配置项
-
-| 配置项 | 环境变量 | 说明 | 默认值 |
-|--------|----------|------|--------|
-| 数据库主机 | `DB_HOST` | MySQL 服务器地址 | `127.0.0.1` |
-| 数据库端口 | `DB_PORT` | MySQL 端口 | `3306` |
-| 数据库用户 | `DB_USER` | 数据库用户名 | `root` |
-| 数据库密码 | `DB_PASSWORD` | 数据库密码 | 空 |
-| 服务器端口 | `SERVER_PORT` | 应用监听端口 | `8080` |
-| 管理员用户名 | `ADMIN_USERNAME` | 管理员用户名 | `admin` |
-| 管理员密码 | `ADMIN_PASSWORD` | 管理员密码 | **必须设置** |
-| 上传目录 | `UPLOAD_DIRECTORY` | 文件上传路径 | `uploads` |
-| 最大文件大小 | `UPLOAD_MAX_SIZE` | 单文件最大大小(字节) | `536870912` (512MB) |
-
-📋 详细配置说明请参考：[配置文档](docs/CONFIG.md)
-
-## 🐳 Docker 部署
-
-### 开发环境
-
-```bash
-# 快速启动
-make dev
-# 或
+git clone https://github.com/Jwz-git/myNetdisk.git
+cd myNetdisk
 ./scripts/start.sh dev
-
-# 手动启动
-docker-compose -f deploy/docker-compose.yml up -d
 ```
 
-### 生产环境
+启动后访问：
+
+- 首页：<http://localhost:8080/>
+- 登录页：<http://localhost:8080/login>
+- 管理页：<http://localhost:8080/admin>
+
+开发环境默认管理员为 `admin` / `123456`，仅供本地体验。生产部署必须设置自己的密码。
+
+首次启动会自动创建 SQLite 数据库 `data/personal_disk.db`；`storage/` 会在第一次上传时创建。
+
+### Docker 运行
+
+开发配置同样默认使用 SQLite，只启动一个应用容器：
 
 ```bash
-# 设置必要的环境变量
-export ADMIN_PASSWORD="your_secure_password_here"
-export DB_PASSWORD="your_database_password_here"
-
-# 启动生产环境
-make prod
-# 或
-./scripts/start.sh prod
-
-# 或使用生产配置文件
-docker-compose -f deploy/docker-compose.prod.yml up -d
+docker compose -f deploy/docker-compose.yml up -d --build
 ```
 
-### Docker 容器管理
+查看日志或停止服务：
 
 ```bash
-# 查看日志
-make logs
-
-# 停止服务
-make stop
-
-# 重启服务
-docker-compose -f deploy/docker-compose.yml restart
-
-# 重新构建
-make build
+docker compose -f deploy/docker-compose.yml logs -f app
+docker compose -f deploy/docker-compose.yml down
 ```
 
-## 🔧 开发指南
+SQLite 数据和上传内容保存在 Docker 命名卷中。上述 `down` 命令不会删除数据；执行 `docker compose -f deploy/docker-compose.yml down -v` 会删除这些卷和其中的数据。
 
-### 项目结构
+## 配置
 
-详细的项目结构说明请参考：[项目结构文档](docs/STRUCTURE.md)
+应用通过 `APP_ENV` 选择配置文件，环境变量的值优先于 YAML：
 
-### 本地开发
+| `APP_ENV` | 配置文件 | 数据库 |
+|---|---|---|
+| 未设置或 `development` | `configs/development.yml` | SQLite |
+| `test` | `configs/test.yml` | SQLite |
+| `production` | `configs/production.yml` | SQLite |
 
-1. **启动开发环境**
-   ```bash
-   ./scripts/start.sh dev --logs
-   ```
+常用环境变量：
 
-2. **代码热重载**（可选）
-   ```bash
-   # 安装 air
-   go install github.com/cosmtrek/air@latest
-   
-   # 启动热重载
-   air
-   ```
+| 变量 | 用途 | 默认值 |
+|---|---|---|
+| `DB_DRIVER` | 数据库驱动：`sqlite` 或 `mysql` | `sqlite` |
+| `DB_PATH` | SQLite 文件路径 | `data/personal_disk.db` |
+| `DB_HOST` | MySQL 地址 | `127.0.0.1` |
+| `DB_PORT` | MySQL 端口 | `3306` |
+| `DB_USER` | MySQL 用户名 | `root` |
+| `DB_PASSWORD` | MySQL 密码 | 空 |
+| `DB_NAME` | MySQL 数据库名 | `personal_disk` |
+| `SERVER_HOST` | 服务监听地址 | 由环境配置决定 |
+| `SERVER_PORT` | 服务监听端口 | `8080` |
+| `ADMIN_USERNAME` | 管理员用户名 | `admin` |
+| `ADMIN_PASSWORD` | 管理员密码 | 由环境配置决定 |
+| `UPLOAD_DIRECTORY` | 文件保存目录 | `storage` |
+| `UPLOAD_MAX_SIZE` | 单文件上限，单位为字节 | 由环境配置决定 |
 
-3. **数据库操作**
-   ```bash
-   # 连接开发数据库
-   docker exec -it personal_disk_db mysql -u root -p personal_disk
-   ```
+本地使用示例文件：
 
-### API 接口
+```bash
+cp env.example .env
+set -a
+source .env
+set +a
+go run ./cmd/netdisk
+```
 
-| 方法 | 路径 | 说明 | 认证 |
-|------|------|------|------|
-| `POST` | `/api/login` | 用户登录 | 否 |
-| `POST` | `/api/upload` | 上传文件 | 是 |
+应用本身不会读取 `.env`，因此本地运行前需要将变量导入当前 Shell。Docker Compose 会自动读取项目根目录的 `.env`。
+
+启动脚本在前台运行，按 `Ctrl+C` 停止服务。它只依赖 Go，不依赖 Docker；也可直接执行 `go run ./cmd/netdisk`。
+
+完整配置说明见 [docs/CONFIG.md](docs/CONFIG.md)。
+
+## 使用 MySQL
+
+MySQL 是显式选项，不会随默认 Docker Compose 一起启动。先创建数据库：
+
+```bash
+mysql -u root -p -e \
+  'CREATE DATABASE personal_disk CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;'
+```
+
+然后提供连接参数：
+
+```bash
+DB_DRIVER=mysql \
+DB_HOST=127.0.0.1 \
+DB_PORT=3306 \
+DB_USER=root \
+DB_PASSWORD='your-password' \
+DB_NAME=personal_disk \
+go run ./cmd/netdisk
+```
+
+应用会自动创建或补齐 `file_info` 表，但不会在 SQLite 与 MySQL 之间迁移已有数据。
+
+容器连接外部 MySQL 时，`DB_HOST` 必须是容器内可访问的地址，通常不能填写宿主机的 `127.0.0.1`。
+
+## 生产部署
+
+生产 Compose 要求显式设置管理员密码：
+
+```bash
+ADMIN_PASSWORD='replace-with-a-strong-password' \
+docker compose -f deploy/docker-compose.prod.yml up -d --build
+```
+
+生产环境建议同时做到：
+
+- 使用高强度 `ADMIN_PASSWORD`
+- 通过 HTTPS 反向代理提供服务
+- 限制公开访问范围；当前列表和下载接口默认公开
+- 同时备份数据库和上传目录
+- 多实例部署时使用 MySQL，并为上传目录提供共享存储
+
+## API
+
+| 方法 | 路径 | 用途 | 需要登录 |
+|---|---|---|---|
+| `POST` | `/api/login` | 登录 | 否 |
+| `POST` | `/api/upload` | 上传文件或文件夹 | 是 |
 | `GET` | `/api/files` | 获取文件列表 | 否 |
-| `GET` | `/api/download/{id}` | 下载文件 | 否 |
-| `DELETE` | `/api/delete/{id}` | 删除文件 | 是 |
-| `POST/PUT` | `/api/rename/{id}` | 重命名文件 | 是 |
+| `GET` | `/api/download/{id}` | 下载文件或文件夹 ZIP | 否 |
+| `DELETE` | `/api/delete/{id}` | 删除文件或文件夹 | 是 |
+| `POST` / `PUT` | `/api/rename/{id}` | 重命名 | 是 |
+| `GET` | `/logout` | 退出登录 | 否 |
 
-## 📊 性能特性
+重命名请求体：
 
-- ⚡ **并发上传**: 支持多文件并发上传
-- 🗄️ **流式下载**: 大文件流式传输，节省内存
-- 📝 **连接池**: 数据库连接池优化
-- 🔄 **会话管理**: 高效的用户会话处理
-
-## 🛡️ 安全考虑
-
-- ✅ **文件类型验证**: 严格的文件类型白名单
-- ✅ **路径安全**: 防止目录遍历攻击
-- ✅ **大小限制**: 防止大文件攻击
-- ✅ **认证保护**: 管理功能需要认证
-- ✅ **CORS 控制**: 可配置的跨域策略
-- ✅ **错误处理**: 安全的错误信息处理
-
-## 🚨 故障排除
-
-### 常见问题
-
-1. **端口被占用**
-   ```bash
-   # 查找占用端口的进程
-   lsof -i :8080
-   # 或更换端口
-   export SERVER_PORT=8081
-   ```
-
-2. **数据库连接失败**
-   - 检查 MySQL 服务是否启动
-   - 验证数据库连接配置
-   - 确认网络连通性
-
-3. **文件上传失败**
-   - 检查上传目录权限
-   - 验证文件大小限制
-   - 确认文件类型是否允许
-
-4. **Docker 启动失败**
-   ```bash
-   # 查看详细日志
-   docker-compose logs
-   
-   # 重新构建镜像
-   docker-compose build --no-cache
-   ```
-
-### 日志查看
-
-```bash
-# Docker 环境
-docker-compose logs -f app
-
-# 本地开发
-tail -f app.log
+```json
+{"file_name":"new-name.txt"}
 ```
 
-## 📈 监控和维护
-
-### 健康检查
+## 开发与验证
 
 ```bash
-# 检查应用状态
-curl http://localhost:8080/
-
-# 检查数据库连接
-docker exec personal_disk_db mysqladmin ping
+go test ./...
+go vet ./...
+CGO_ENABLED=0 go build ./cmd/netdisk
 ```
 
-### 备份建议
+常用 Make 目标：
 
 ```bash
-# 数据库备份
-docker exec personal_disk_db mysqldump -u root -p personal_disk > backup.sql
-
-# 文件备份
-tar -czf uploads_backup.tar.gz uploads/
+make run      # 本地运行
+make test     # 执行测试
+make check    # 格式化、静态检查和测试
+make build    # 构建 Docker 镜像
+make clean    # 清理测试与构建临时文件
 ```
 
----
+`make clean` 不会删除 `data/`、`storage/` 或 Docker 数据卷。
 
-<div align="center">
-  <p>如果这个项目对您有帮助，请考虑给它一个 ⭐</p>
-  <p>有问题或建议？欢迎提交 <a href="../../issues">Issue</a></p>
-</div>
+## 项目结构
+
+```text
+cmd/netdisk/          应用入口与路由组装
+internal/config/      配置加载和校验
+internal/controller/  页面与 API 处理器
+internal/middleware/  CORS 和请求限流
+internal/model/       数据库初始化与文件元数据访问
+configs/              YAML 环境配置
+web/static/           CSS 和 JavaScript
+web/templates/        HTML 模板
+build/Dockerfile      应用镜像的构建规则
+deploy/               Docker Compose 运行编排
+docs/                 配置、快速开始和结构说明
+```
+
+`build/` 与 `deploy/` 都包含 Docker 相关内容，但职责不同：前者定义镜像如何生成，后者定义镜像如何运行。完整目录说明见 [docs/STRUCTURE.md](docs/STRUCTURE.md)。
+
+## 数据边界
+
+- 数据库只保存文件元数据，文件内容保存在上传目录。
+- 恢复服务需要同时恢复数据库与上传内容。
+- SQLite 适合单实例运行；它不是多容器并发共享数据库的替代品。
+- 文件夹压缩发生在浏览器内存中，选择超大文件夹时需要足够的客户端可用内存。
